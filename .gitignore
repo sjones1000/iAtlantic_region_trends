@@ -1,0 +1,4 @@
+# example exclude .mat files
+# *.mat
+# exclude folders
+# /data

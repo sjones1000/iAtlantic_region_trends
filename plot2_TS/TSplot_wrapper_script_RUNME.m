@@ -1,7 +1,7 @@
 clear; close all;
 
 addpath functions
-addpath(genpath('../../other_functions'));
+addpath(genpath('../other_functions'));
 addpath('H:/Viking20X'); % <- model data location
 
 regions = [2 7 8];

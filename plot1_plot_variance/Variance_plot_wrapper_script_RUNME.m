@@ -10,5 +10,3 @@ for aa= 1:length(regions)
     disp(['********** Working on Region ' num2str(region) ' ***************']);
     p1_plot_variance_worker(region)
 end
-
-% REMEMBER THAT WE'RE NOT RUNNING FOR ALL YEARS YET, JUST A SUBSET
