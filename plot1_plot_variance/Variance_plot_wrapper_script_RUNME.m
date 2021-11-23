@@ -2,7 +2,7 @@ clear; close all;
 
 addpath functions
 addpath(genpath('../other_functions'));
-addpath('H:/Viking20X'); % <- model data location
+addpath('../../iAtlantic_regions/data/D1p2/'); % <- model data location
 
 regions = [2 7 8];
 for aa= 1:length(regions)
