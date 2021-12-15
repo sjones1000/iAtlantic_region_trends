@@ -1,4 +1,4 @@
-function p2_plot_TS_worker(region)
+function p2_plot_profiles_worker(region)
 
 year = 1980:2019;
 %season = [1 2 3; 4 5 6; 7 8 9; 10 11 12];
@@ -35,7 +35,7 @@ end
 
 
 %% Load settings specific to this region.
-[regional_settings] = regional_settings_TS_plot(region,bathy);
+[regional_settings] = regional_settings_profiles_plot(region,bathy);
 
 
 
@@ -114,98 +114,78 @@ end % End year loop
 %% Convert GSW
 % Convert to TEOS-10
 % [SA, in_ocean] = gsw_SA_from_SP(SP,p,long,lat)
-%SA = gsw_SA_from_SP(S_mean,depth,nanmean(nanmean(lon2d)),nanmean(nanmean(lat2d))); 
+SA = gsw_SA_from_SP(S_mean,depth,nanmean(nanmean(lon2d)),nanmean(nanmean(lat2d))); 
 % CT = gsw_CT_from_t(SA,t,p)
-% CT = gsw_CT_from_t(SA,T_mean,depth);
+CT = gsw_CT_from_t(SA,T_mean,depth);
 % sigma0 = gsw_sigma0(SA,CT)
 % sigma0 = gsw_sigma0(ocean.SA,ocean.CT);
-T = T_mean;
-S = S_mean;
+
 
 
     
 %% Figure %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%;
 
-%% Generate density contours
-mint = min(min(T))-0.2; maxt = max(max(T))+0.2;
-mins = min(min(S))-0.05; maxs = max(max(S))+0.05;
-xdim = linspace(mins,maxs,100);
-ydim = linspace(mint,maxt,100);
-[S_2D,T_2D] = meshgrid(xdim,ydim);
-% gamma_n = eos80_legacy_gamma_n(SP,t,p,long,lat)
-gamma_n = eos80_legacy_gamma_n(S_2D,T_2D,0,nanmean(nanmean(lon2d)),nanmean(nanmean(lat2d)));
+
+
+    
 
 
 
 % Plot
 figure(1)
 clf
+
+%%  temperature subplot
+subplot(1,2,1);
 hold on;
-mindens = floor(min(min(gamma_n)));
-maxdens = ceil(max(max(gamma_n)));
-% levels = mindens:0.25:maxdens;
-% [c,h]=contour(sig0_x,sig0_y,sig0,levels,'color',[0.4 0.4 0.4]);
-% clabel(c,h,'LabelSpacing',1000,'color',[0.4 0.4 0.4],'fontsize',14);
-
-Ynlevels = mindens:0.1:maxdens;
-[d,j]=contour(xdim,ydim,gamma_n,Ynlevels,'color',[0.4 0.4 0.7]);
-clabel(d,j,'LabelSpacing',1000,'color',[0.4 0.4 0.4],'fontsize',14);
-
-
-xlabel('Practical salinity','fontsize',20)
-ylabel('Temperature (^oC)','fontsize',20)
-set(gca,'fontsize',20);
-% xlim([mins maxs]); ylim([mint maxt]);
 
 % plot data
 for yy = 1:length(year) 
-plot(S(:,yy),T(:,yy),'linewidth',2,'color',colours(yy,:));
+plot(CT(:,yy),depth,'linewidth',2,'color',colours(yy,:));
 end
 
-% % plot water masses
-% WM = load('source_WM.mat');
-% 
-% for aa = regional_settings.water_mass_plot
-%     if ~isnan(WM.CT(aa,2)) % if there is an upper and lower line
-%         line([WM.SA(aa,1) WM.SA(aa,2)],[WM.CT(aa,1) WM.CT(aa,2)],'color','k','linewidth',2);
-%         plot(WM.SA(aa,1),WM.CT(aa,1),'ok','linewidth',2);
-%         plot(WM.SA(aa,2),WM.CT(aa,2),'ok','linewidth',2);
-%         text(((WM.SA(aa,1)+WM.SA(aa,2))/2),((WM.CT(aa,1)+WM.CT(aa,2))/2),WM.Name(aa),'fontsize',14);
-%     else % if there is just a point
-%         plot(WM.SA(aa,1),WM.CT(aa,1),'+k','linewidth',2);
-%         text(WM.SA(aa,1),WM.CT(aa,1),WM.Name(aa),'fontsize',14);
-%     end
-% end
+
+%xlabel('Absolute salinity (g/kg)','fontsize',14)
+xlabel('Conservative temperature (^oC)','fontsize',14)
+ylabel('Depth (m)')
+set(gca,'fontsize',14);
+set(gca,'ydir','reverse');
+grid on;
+% xlim([mins maxs]); ylim([mint maxt]);
+
+%%  salinity subplot
+subplot(1,2,2);
+hold on;
+
+% plot data
+for yy = 1:length(year) 
+plot(SA(:,yy),depth,'linewidth',2,'color',colours(yy,:));
+end
+
+
+xlabel('Absolute salinity (g/kg)','fontsize',14)
+%xlabel('Conservative temperature (^oC)','fontsize',14)
+ylabel('Depth (m)')
+set(gca,'fontsize',14);
+set(gca,'ydir','reverse');
+grid on;
+% xlim([mins maxs]); ylim([mint maxt]);
+
+
+
+
 
 % Colorbar
 colormap(colours);
 caxis([1979.5 2019.5]);
 cb = colorbar;
-set(cb,'fontsize',20);
+set(cb,'fontsize',14);
 
-% Axis limits
-if region == 4
-    xlim([34.5 maxs]);
-    ylim([mint maxt]);
-else
-    xlim([mins maxs]);
-    ylim([mint maxt]);
-end
-
-% % Axis limits
-% if ~isempty(regional_settings.axis_limits)
-%     % [x1 x2 y1 y2];
-%     xlim([regional_settings.axis_limits(1) regional_settings.axis_limits(2)]);
-%     ylim([regional_settings.axis_limits(3) regional_settings.axis_limits(4)]);
-% else
-%     xlim([mins maxs]);
-%     ylim([mint maxt]);
-% end
 
 %% print figure
-width  = 1500;  % frame width
+width  = 2000;  % frame width
 height = 1500;  % frame height
-pngname = (['plots/t_psal/p2_V20_TS_coloured_time_REG_' num2str(region) '_' regional_settings.region_name]);
+pngname = (['plots/p2_V20_profiles_coloured_time_REG_' num2str(region) '_' regional_settings.region_name]);
 
 % set background color (outside axes)
 set(gcf,'color',[1 1 1]);
