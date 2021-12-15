@@ -9,9 +9,8 @@ colours = (pmkmp(40,'CubicL'));
 
 %% Read global nc vars
 
-filename = ['1_VIKING20X.L46-KFS003_1m_19800101_19801231_grid_T_reg' num2str(region) '.nc'];
-z = ncread(filename,'depth');
-z2d = ncread(filename,'gdept_0'); % partial grid cells at bottom due to bathymetry
+filename = ['mesh_mask_reg' num2str(region) '.nc'];
+
 x = ncread(filename,'x');
 y = ncread(filename,'y');
 lon2d = ncread(filename,'glamt');
@@ -19,8 +18,24 @@ lat2d = ncread(filename,'gphit');
 dx2d = ncread(filename,'e1t');
 dy2d = ncread(filename,'e2t');
 bathyind = ncread(filename,'mbathy');
-depth = ncread(filename,'depth');
-time = ncread(filename,'time');
+z2d = ncread(filename,'gdept_0');
+
+if region <= 9
+filename = ['1_INALT20.L46-KFS119_1m_19800101_19801231_reg0' num2str(region) '_grid_T.nc'];
+else
+    filename = ['1_INALT20.L46-KFS119_1m_19800101_19801231_reg' num2str(region) '_grid_T.nc'];
+end
+
+depth = double(ncread(filename,'deptht'));
+% z2d = ncread(filename,'gdept_0'); % partial grid cells at bottom due to bathymetry
+
+
+
+
+%time = ncread(filename,'time');
+
+
+
 
 % create real bathy values out of index bathy
 bathy = nan * bathyind;
@@ -48,12 +63,16 @@ S_mean = T_mean;
 % Loop thru years.
 disp(['Creating annual means of T and S for region ' num2str(region)]);
 for yy = 1:length(year) % for each year netcdf
-    filename = ['1_VIKING20X.L46-KFS003_1m_' num2str(year(yy)) '0101_' num2str(year(yy)) '1231_grid_T_reg' num2str(region) '.nc'];
+    if region <= 9
+        filename = ['1_INALT20.L46-KFS119_1m_' num2str(year(yy)) '0101_' num2str(year(yy)) '1231_reg0' num2str(region) '_grid_T.nc'];
+    else
+        filename = ['1_INALT20.L46-KFS119_1m_' num2str(year(yy)) '0101_' num2str(year(yy)) '1231_reg' num2str(region) '_grid_T.nc'];
+    end
     % Read local nc vars
     T = ncread(filename,'votemper');
     S = ncread(filename,'vosaline');
-    time = ncread(filename,'time');
-    time = time + basetime;
+    time = ncread(filename,'time_centered');
+    time = (time/86400) + basetime;
     
     % Average ovewr time
     T = mean(T,4);
@@ -114,26 +133,45 @@ end % End year loop
 %% Convert GSW
 % Convert to TEOS-10
 % [SA, in_ocean] = gsw_SA_from_SP(SP,p,long,lat)
-%SA = gsw_SA_from_SP(S_mean,depth,nanmean(nanmean(lon2d)),nanmean(nanmean(lat2d))); 
+SA = gsw_SA_from_SP(S_mean,depth,nanmean(nanmean(lon2d)),nanmean(nanmean(lat2d))); 
 % CT = gsw_CT_from_t(SA,t,p)
-% CT = gsw_CT_from_t(SA,T_mean,depth);
+CT = gsw_CT_from_t(SA,T_mean,depth);
 % sigma0 = gsw_sigma0(SA,CT)
 % sigma0 = gsw_sigma0(ocean.SA,ocean.CT);
-T = T_mean;
-S = S_mean;
+
 
 
     
 %% Figure %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%;
 
 %% Generate density contours
-mint = min(min(T))-0.2; maxt = max(max(T))+0.2;
-mins = min(min(S))-0.05; maxs = max(max(S))+0.05;
-xdim = linspace(mins,maxs,100);
-ydim = linspace(mint,maxt,100);
-[S_2D,T_2D] = meshgrid(xdim,ydim);
+mint = min(min(CT))-0.2; maxt = max(max(CT))+0.2;
+mins = min(min(SA))-0.05; maxs = max(max(SA))+0.05;
+xdim = round((maxs-mins)./0.005+1);
+ydim=round((maxt-mint)./0.05+1);
+sig0=zeros(ydim,xdim);
+gamma_n=zeros(ydim,xdim);
+sig0_y=((1:ydim)-1)*0.05+mint;
+sig0_x=((1:xdim)-1)*0.005+mins;
+
+% Conversion to neutral density for contours
+% sig0_x is salinity increments, y is temp increments
+
+[SA_2D,CT_2D] = meshgrid(sig0_x,sig0_y);
+%repmat(nanmean(sig0_x),1,length(sig0_y));
+
+%psal =  gsw_SP_from_SA(SA,p,long,lat)
+psal_2D = gsw_SP_from_SA(SA_2D,0,nanmean(nanmean(lon2d)),nanmean(nanmean(lat2d)));
+% t = gsw_t_from_CT(SA,CT,p)
+temp_2D = gsw_t_from_CT(SA_2D,CT_2D,0);
+disp('Calculating neutral density for plot (may take a while)')
 % gamma_n = eos80_legacy_gamma_n(SP,t,p,long,lat)
-gamma_n = eos80_legacy_gamma_n(S_2D,T_2D,0,nanmean(nanmean(lon2d)),nanmean(nanmean(lat2d)));
+gamma_n = eos80_legacy_gamma_n(psal_2D,temp_2D,0,nanmean(nanmean(lon2d)),nanmean(nanmean(lat2d)));
+% sigma0 = gsw_sigma0(SA,CT)
+sig0 = gsw_sigma0(SA_2D,CT_2D);
+
+
+    
 
 
 
@@ -141,41 +179,41 @@ gamma_n = eos80_legacy_gamma_n(S_2D,T_2D,0,nanmean(nanmean(lon2d)),nanmean(nanme
 figure(1)
 clf
 hold on;
-mindens = floor(min(min(gamma_n)));
-maxdens = ceil(max(max(gamma_n)));
+mindens = floor(min(min(sig0)));
+maxdens = ceil(max(max(sig0)));
 % levels = mindens:0.25:maxdens;
 % [c,h]=contour(sig0_x,sig0_y,sig0,levels,'color',[0.4 0.4 0.4]);
 % clabel(c,h,'LabelSpacing',1000,'color',[0.4 0.4 0.4],'fontsize',14);
 
 Ynlevels = mindens:0.1:maxdens;
-[d,j]=contour(xdim,ydim,gamma_n,Ynlevels,'color',[0.4 0.4 0.7]);
+[d,j]=contour(sig0_x,sig0_y,gamma_n,Ynlevels,'color',[0.4 0.4 0.7]);
 clabel(d,j,'LabelSpacing',1000,'color',[0.4 0.4 0.4],'fontsize',14);
 
 
-xlabel('Practical salinity','fontsize',20)
-ylabel('Temperature (^oC)','fontsize',20)
+xlabel('Absolute salinity (g/kg)','fontsize',20)
+ylabel('Conservative temperature (^oC)','fontsize',20)
 set(gca,'fontsize',20);
 % xlim([mins maxs]); ylim([mint maxt]);
 
 % plot data
 for yy = 1:length(year) 
-plot(S(:,yy),T(:,yy),'linewidth',2,'color',colours(yy,:));
+plot(SA(:,yy),CT(:,yy),'linewidth',2,'color',colours(yy,:));
 end
 
-% % plot water masses
-% WM = load('source_WM.mat');
-% 
-% for aa = regional_settings.water_mass_plot
-%     if ~isnan(WM.CT(aa,2)) % if there is an upper and lower line
-%         line([WM.SA(aa,1) WM.SA(aa,2)],[WM.CT(aa,1) WM.CT(aa,2)],'color','k','linewidth',2);
-%         plot(WM.SA(aa,1),WM.CT(aa,1),'ok','linewidth',2);
-%         plot(WM.SA(aa,2),WM.CT(aa,2),'ok','linewidth',2);
-%         text(((WM.SA(aa,1)+WM.SA(aa,2))/2),((WM.CT(aa,1)+WM.CT(aa,2))/2),WM.Name(aa),'fontsize',14);
-%     else % if there is just a point
-%         plot(WM.SA(aa,1),WM.CT(aa,1),'+k','linewidth',2);
-%         text(WM.SA(aa,1),WM.CT(aa,1),WM.Name(aa),'fontsize',14);
-%     end
-% end
+% plot water masses
+WM = load('source_WM.mat');
+
+for aa = regional_settings.water_mass_plot
+    if ~isnan(WM.CT(aa,2)) % if there is an upper and lower line
+        line([WM.SA(aa,1) WM.SA(aa,2)],[WM.CT(aa,1) WM.CT(aa,2)],'color','k','linewidth',2);
+        plot(WM.SA(aa,1),WM.CT(aa,1),'ok','linewidth',2);
+        plot(WM.SA(aa,2),WM.CT(aa,2),'ok','linewidth',2);
+        text(((WM.SA(aa,1)+WM.SA(aa,2))/2),((WM.CT(aa,1)+WM.CT(aa,2))/2),WM.Name(aa),'fontsize',14);
+    else % if there is just a point
+        plot(WM.SA(aa,1),WM.CT(aa,1),'+k','linewidth',2);
+        text(WM.SA(aa,1),WM.CT(aa,1),WM.Name(aa),'fontsize',14);
+    end
+end
 
 % Colorbar
 colormap(colours);
@@ -184,28 +222,19 @@ cb = colorbar;
 set(cb,'fontsize',20);
 
 % Axis limits
-if region == 4
-    xlim([34.5 maxs]);
-    ylim([mint maxt]);
+if ~isempty(regional_settings.axis_limits)
+    % [x1 x2 y1 y2];
+    xlim([regional_settings.axis_limits(1) regional_settings.axis_limits(2)]);
+    ylim([regional_settings.axis_limits(3) regional_settings.axis_limits(4)]);
 else
     xlim([mins maxs]);
     ylim([mint maxt]);
 end
 
-% % Axis limits
-% if ~isempty(regional_settings.axis_limits)
-%     % [x1 x2 y1 y2];
-%     xlim([regional_settings.axis_limits(1) regional_settings.axis_limits(2)]);
-%     ylim([regional_settings.axis_limits(3) regional_settings.axis_limits(4)]);
-% else
-%     xlim([mins maxs]);
-%     ylim([mint maxt]);
-% end
-
 %% print figure
 width  = 1500;  % frame width
 height = 1500;  % frame height
-pngname = (['plots/t_psal/p2_V20_TS_coloured_time_REG_' num2str(region) '_' regional_settings.region_name]);
+pngname = (['plots/p2_INALT20_TS_coloured_time_REG_' num2str(region) '_' regional_settings.region_name]);
 
 % set background color (outside axes)
 set(gcf,'color',[1 1 1]);

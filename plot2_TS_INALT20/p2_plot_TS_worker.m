@@ -9,9 +9,8 @@ colours = (pmkmp(40,'CubicL'));
 
 %% Read global nc vars
 
-filename = ['1_VIKING20X.L46-KFS003_1m_19800101_19801231_grid_T_reg' num2str(region) '.nc'];
-z = ncread(filename,'depth');
-z2d = ncread(filename,'gdept_0'); % partial grid cells at bottom due to bathymetry
+filename = ['mesh_mask_reg' num2str(region) '.nc'];
+
 x = ncread(filename,'x');
 y = ncread(filename,'y');
 lon2d = ncread(filename,'glamt');
@@ -19,8 +18,24 @@ lat2d = ncread(filename,'gphit');
 dx2d = ncread(filename,'e1t');
 dy2d = ncread(filename,'e2t');
 bathyind = ncread(filename,'mbathy');
-depth = ncread(filename,'depth');
-time = ncread(filename,'time');
+z2d = ncread(filename,'gdept_0');
+
+if region <= 9
+filename = ['1_INALT20.L46-KFS119_1m_19800101_19801231_reg0' num2str(region) '_grid_T.nc'];
+else
+    filename = ['1_INALT20.L46-KFS119_1m_19800101_19801231_reg' num2str(region) '_grid_T.nc'];
+end
+
+depth = double(ncread(filename,'deptht'));
+% z2d = ncread(filename,'gdept_0'); % partial grid cells at bottom due to bathymetry
+
+
+
+
+%time = ncread(filename,'time');
+
+
+
 
 % create real bathy values out of index bathy
 bathy = nan * bathyind;
@@ -48,12 +63,16 @@ S_mean = T_mean;
 % Loop thru years.
 disp(['Creating annual means of T and S for region ' num2str(region)]);
 for yy = 1:length(year) % for each year netcdf
-    filename = ['1_VIKING20X.L46-KFS003_1m_' num2str(year(yy)) '0101_' num2str(year(yy)) '1231_grid_T_reg' num2str(region) '.nc'];
+    if region <= 9
+        filename = ['1_INALT20.L46-KFS119_1m_' num2str(year(yy)) '0101_' num2str(year(yy)) '1231_reg0' num2str(region) '_grid_T.nc'];
+    else
+        filename = ['1_INALT20.L46-KFS119_1m_' num2str(year(yy)) '0101_' num2str(year(yy)) '1231_reg' num2str(region) '_grid_T.nc'];
+    end
     % Read local nc vars
     T = ncread(filename,'votemper');
     S = ncread(filename,'vosaline');
-    time = ncread(filename,'time');
-    time = time + basetime;
+    time = ncread(filename,'time_centered');
+    time = (time/86400) + basetime;
     
     % Average ovewr time
     T = mean(T,4);
@@ -111,14 +130,14 @@ for yy = 1:length(year) % for each year netcdf
     disp(['Completed ' num2str(year(yy))]);
 end % End year loop
     
-%% Convert GSW
-% Convert to TEOS-10
-% [SA, in_ocean] = gsw_SA_from_SP(SP,p,long,lat)
-%SA = gsw_SA_from_SP(S_mean,depth,nanmean(nanmean(lon2d)),nanmean(nanmean(lat2d))); 
-% CT = gsw_CT_from_t(SA,t,p)
+% %% Convert GSW
+% % Convert to TEOS-10
+% % [SA, in_ocean] = gsw_SA_from_SP(SP,p,long,lat)
+% SA = gsw_SA_from_SP(S_mean,depth,nanmean(nanmean(lon2d)),nanmean(nanmean(lat2d))); 
+% % CT = gsw_CT_from_t(SA,t,p)
 % CT = gsw_CT_from_t(SA,T_mean,depth);
-% sigma0 = gsw_sigma0(SA,CT)
-% sigma0 = gsw_sigma0(ocean.SA,ocean.CT);
+% % sigma0 = gsw_sigma0(SA,CT)
+% % sigma0 = gsw_sigma0(ocean.SA,ocean.CT);
 T = T_mean;
 S = S_mean;
 
@@ -134,8 +153,6 @@ ydim = linspace(mint,maxt,100);
 [S_2D,T_2D] = meshgrid(xdim,ydim);
 % gamma_n = eos80_legacy_gamma_n(SP,t,p,long,lat)
 gamma_n = eos80_legacy_gamma_n(S_2D,T_2D,0,nanmean(nanmean(lon2d)),nanmean(nanmean(lat2d)));
-
-
 
 % Plot
 figure(1)
@@ -205,7 +222,7 @@ end
 %% print figure
 width  = 1500;  % frame width
 height = 1500;  % frame height
-pngname = (['plots/t_psal/p2_V20_TS_coloured_time_REG_' num2str(region) '_' regional_settings.region_name]);
+pngname = (['plots/t_psal/p2_INALT20_TS_coloured_time_REG_' num2str(region) '_' regional_settings.region_name]);
 
 % set background color (outside axes)
 set(gcf,'color',[1 1 1]);

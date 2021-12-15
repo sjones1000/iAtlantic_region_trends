@@ -1,5 +1,6 @@
 function p4_plot_timeseries_worker(region)
-
+disp(['Working on region ' num2str(region)]);
+tic
 year = 1980:2020;
 %season = [1 2 3; 4 5 6; 7 8 9; 10 11 12];
 %season_names = ['JFM';'AMJ';'JAS';'OND'];
@@ -79,11 +80,33 @@ reg.CT(bathy_mask==0) = nan;
 reg.SA(bathy_mask==0) = nan;
 reg.sigma0(bathy_mask==0) = nan;
 
+clear reg.sigma0
+
+%% NEED TO CALCULATE NEUTRAL DENSITY 
+% Need 4D p, can't remember how to repmat higher dims
+reg.p4D = nan*reg.SA;
+for aa = 1:length(reg.time)
+    reg.p4D(:,:,:,aa) = reg.p;
+end
+% Similarly for lon,lat
+[reg.lon4D,reg.lat4D,dum,dum] = ndgrid(reg.lon,reg.lat,reg.depth,reg.time);
+
+% Need to do some pruning otherwise 'out of memory' issues
+clear dum bathy_mask
+reg = rmfield(reg,'sigma0');
+%psal =  gsw_SP_from_SA(SA,p,long,lat)
+% psal_2D = gsw_SP_from_SA(REG.SA,0,nanmean(reg.lon),nanmean(reg.lat)); % We have salinity already in EN4
+% t = gsw_t_from_CT(SA,CT,p)
+reg.temp = gsw_t_from_CT(reg.SA,reg.CT,reg.p4D);
+% gamma_n = eos80_legacy_gamma_n(SP,t,p,long,lat)
+reg.gamma_n = eos80_legacy_gamma_n(reg.S,reg.temp,0*reg.p4D,reg.lon4D,reg.lat4D);
+
+
 %% Main loop below.
 
-if isfield(regional_settings,'sig0_thresholds') % If we have one or more density thresholds
+if isfield(regional_settings,'Yn_thresholds') % If we have one or more density thresholds
     
-    num_timeseries = length(regional_settings.sig0_thresholds(:,1));
+    num_timeseries = length(regional_settings.Yn_thresholds(:,1));
     
     CT_timeseries = nan*ones(num_timeseries,length(reg.time));
     SA_timeseries = CT_timeseries;
@@ -91,11 +114,12 @@ if isfield(regional_settings,'sig0_thresholds') % If we have one or more density
     for ww = 1:num_timeseries % for each water mass timeseries
         
         for tt = 1:length(reg.time) % for each timestep
-            sig_temp = reg.sigma0(:,:,:,tt);
+            % sig_temp = reg.sigma0(:,:,:,tt);
             CT_temp = reg.CT(:,:,:,tt);
             SA_temp = reg.SA(:,:,:,tt);
+            Yn_temp = reg.gamma_n(:,:,:,tt);
             
-            ind = find(sig_temp >= regional_settings.sig0_thresholds(ww,1) & sig_temp < regional_settings.sig0_thresholds(ww,2));
+            ind = find(Yn_temp >= regional_settings.Yn_thresholds(ww,1) & Yn_temp < regional_settings.Yn_thresholds(ww,2));
             
             CT_timeseries(ww,tt) = nanmean(CT_temp(ind));
             SA_timeseries(ww,tt) = nanmean(SA_temp(ind));
@@ -139,7 +163,7 @@ for nn = 1:num_timeseries
 
     
     %% Tempreature timeseries
-    subplot(3,2,plot_no); 
+    subplot(num_timeseries,2,plot_no); 
     plot(reg.time,CT_timeseries(nn,:),'k');
     grid on;
     xlim([datenum(reg.time(1)) datenum(reg.time(end))]);
@@ -151,7 +175,7 @@ for nn = 1:num_timeseries
     plot_no = plot_no+1;
     
     %% Salinity timeseries
-    subplot(3,2,plot_no); 
+    subplot(num_timeseries,2,plot_no); 
     plot(reg.time,SA_timeseries(nn,:),'k');
     grid on;
     xlim([datenum(reg.time(1)) datenum(reg.time(end))]);
@@ -197,7 +221,7 @@ for nn = 1:num_timeseries
 
     
     %% Tempreature seasonality
-    subplot(3,2,plot_no); 
+    subplot(num_timeseries,2,plot_no); 
     hold on
     % plot individual years in grey
     for yy = min(reg.year):max(reg.year)
@@ -216,7 +240,7 @@ for nn = 1:num_timeseries
     plot_no = plot_no+1;
     
     %% Salinity seasonality
-    subplot(3,2,plot_no); 
+    subplot(num_timeseries,2,plot_no); 
     hold on
     % plot individual years in grey
     for yy = min(reg.year):max(reg.year)
@@ -258,6 +282,7 @@ set(gcf,'paperposition',[0 0 width height]./resolution);
 % the 'zbuffer' method is likely to look similar to the plot window
 print('-dpng', ['-r' num2str(resolution)], '-opengl', pngname);
 
+toc
 
 
 

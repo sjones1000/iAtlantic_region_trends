@@ -30,15 +30,6 @@ for aa = 1:length(reg.time)
    reg.year(aa,1) = str2num(datestr(reg.time(aa),'yyyy'));
 end
 
-% back-calculate in-situ T from ptemp
-p4D = nan*reg.SA;
-for aa = 1:length(reg.time)
-    p4D(:,:,:,aa) = reg.p;
-end
-% t = gsw_t_from_pt0(SA,pt0,p)
-reg.T = gsw_t_from_pt0(reg.SA,reg.Tptemp,p4D);
-clear p4D
-
 %% Compute bathy associated with each EN4 cell.
 bath = load('G:\Work_computer_sync\MATLAB_functions\m_map\GEBCO_world_1D.mat');
 % bath.bathy = bath.bathy';
@@ -91,7 +82,6 @@ if ~isempty(regional_settings.boundary_polygon)
            tmp = reg.CT(:,:,aa,bb); tmp(mask==0) = nan; reg.CT(:,:,aa,bb) = tmp;
            tmp = reg.SA(:,:,aa,bb); tmp(mask==0) = nan; reg.SA(:,:,aa,bb) = tmp;
            tmp = reg.S(:,:,aa,bb); tmp(mask==0) = nan; reg.S(:,:,aa,bb) = tmp;
-           tmp = reg.T(:,:,aa,bb); tmp(mask==0) = nan; reg.T(:,:,aa,bb) = tmp;
            tmp = reg.Tptemp(:,:,aa,bb); tmp(mask==0) = nan; reg.Tptemp(:,:,aa,bb) = tmp;
            tmp = reg.sigma0(:,:,aa,bb); tmp(mask==0) = nan; reg.sigma0(:,:,aa,bb) = tmp;
        end % end time loop
@@ -116,36 +106,36 @@ for yy = 1:length(year) % for each year netcdf
     ind = find(reg.year == year(yy));
     
     % Read local nc vars
-    T = reg.T(:,:,:,ind);
-    S = reg.S(:,:,:,ind);
+    CT = reg.CT(:,:,:,ind);
+    SA = reg.SA(:,:,:,ind);
     time = reg.time(ind);
     
     % Average ovewr time
-    T = mean(T,4);
-    S = mean(S,4);
+    CT = mean(CT,4);
+    SA = mean(SA,4);
     
     %% Mask using bathymetry if necessary. 
     % Set data outside bathy mask to NaN.  Can probably do this without a
     % loop but the indexing currently escapes me...
     
     for dd = 1:length(reg.depth) % for each depth
-        T_temp = T(:,:,dd);
-        T_temp(regional_settings.bathy_mask==0) = nan;
-        % T(:,:,dd) = T_temp;
-        T_mean(dd,yy) = nanmean(nanmean(T_temp));
+        CT_temp = CT(:,:,dd);
+        CT_temp(regional_settings.bathy_mask==0) = nan;
+        % CT(:,:,dd) = CT_temp;
+        CT_mean(dd,yy) = nanmean(nanmean(CT_temp));
         
-        S_temp = S(:,:,dd);
-        S_temp(regional_settings.bathy_mask==0) = nan;
-        % S(:,:,dd) = S_temp;
-        S_mean(dd,yy) = nanmean(nanmean(S_temp));
+        SA_temp = SA(:,:,dd);
+        SA_temp(regional_settings.bathy_mask==0) = nan;
+        % SA(:,:,dd) = SA_temp;
+        SA_mean(dd,yy) = nanmean(nanmean(SA_temp));
         
     end % End of 'for each depth'
 
 end % End year loop
     
-% Replace 3 dimensional S and T with averaged versions
-T = T_mean;
-S = S_mean;
+% Replace 3 dimensional SA and CT with averaged versions
+CT = CT_mean;
+SA = SA_mean;
 
 
 
@@ -153,14 +143,29 @@ S = S_mean;
 %% Figure %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%;
 
 %% Generate density contours
-mint = min(min(T))-0.2; maxt = max(max(T))+0.2;
-mins = min(min(S))-0.05; maxs = max(max(S))+0.05;
-xdim = linspace(mins,maxs,100);
-ydim = linspace(mint,maxt,100);
-[S_2D,T_2D] = meshgrid(xdim,ydim);
-% gamma_n = eos80_legacy_gamma_n(SP,t,p,long,lat)
-gamma_n = eos80_legacy_gamma_n(S_2D,T_2D,0,nanmean(reg.lon),nanmean(reg.lat));
+mint = min(min(CT))-0.2; maxt = max(max(CT))+0.2;
+mins = min(min(SA))-0.05; maxs = max(max(SA))+0.05;
+xdim = round((maxs-mins)./0.005+1);
+ydim=round((maxt-mint)./0.05+1);
+sig0=zeros(ydim,xdim);
+gamma_n=zeros(ydim,xdim);
+sig0_y=((1:ydim)-1)*0.05+mint;
+sig0_x=((1:xdim)-1)*0.005+mins;
 
+% Conversion to neutral density for contours
+% sig0_x is salinity increments, y is temp increments
+
+[SA_2D,CT_2D] = meshgrid(sig0_x,sig0_y);
+%repmat(nanmean(sig0_x),1,length(sig0_y));
+
+%psal =  gsw_SP_from_SA(SA,p,long,lat)
+psal_2D = gsw_SP_from_SA(SA_2D,0,nanmean(reg.lon),nanmean(reg.lat)); % <-
+% t = gsw_t_from_CT(SA,CT,p)
+temp_2D = gsw_t_from_CT(SA_2D,CT_2D,0); % <-
+% gamma_n = eos80_legacy_gamma_n(SP,t,p,long,lat)
+gamma_n = eos80_legacy_gamma_n(psal_2D,temp_2D,0,nanmean(reg.lon),nanmean(reg.lat));
+% sigma0 = gsw_sigma0(SA,CT)
+sig0 = gsw_sigma0(SA_2D,CT_2D);
 
 
 
@@ -171,37 +176,41 @@ gamma_n = eos80_legacy_gamma_n(S_2D,T_2D,0,nanmean(reg.lon),nanmean(reg.lat));
 figure(1)
 clf
 hold on;
-mindens = floor(min(min(gamma_n)));
-maxdens = ceil(max(max(gamma_n)));
+mindens = floor(min(min(sig0)));
+maxdens = ceil(max(max(sig0)));
+% levels = mindens:0.25:maxdens;
+% [c,h]=contour(sig0_x,sig0_y,sig0,levels,'color',[0.4 0.4 0.4]);
+% clabel(c,h,'LabelSpacing',1000,'color',[0.4 0.4 0.4],'fontsize',14);
+
 Ynlevels = mindens:0.1:maxdens;
-[d,j]=contour(xdim,ydim,gamma_n,Ynlevels,'color',[0.4 0.4 0.7]);
+[d,j]=contour(sig0_x,sig0_y,gamma_n,Ynlevels,'color',[0.4 0.4 0.7]);
 clabel(d,j,'LabelSpacing',1000,'color',[0.4 0.4 0.4],'fontsize',14);
 
 
-xlabel('Practical salinity','fontsize',20)
-ylabel('Temperature (^oC)','fontsize',20)
+xlabel('Absolute salinity (g/kg)','fontsize',20)
+ylabel('Conservative temperature (^oC)','fontsize',20)
 set(gca,'fontsize',20);
 % xlim([mins maxs]); ylim([mint maxt]);
 
 % plot data
 for yy = 1:length(year) 
-plot(S(:,yy),T(:,yy),'linewidth',2,'color',colours(yy,:));
+plot(SA(:,yy),CT(:,yy),'linewidth',2,'color',colours(yy,:));
 end
 
-% % plot water masses
-% WM = load('source_WM.mat');
-% 
-% for aa = regional_settings.water_mass_plot
-%     if ~isnan(WM.CT(aa,2)) % if there is an upper and lower line
-%         line([WM.SA(aa,1) WM.SA(aa,2)],[WM.CT(aa,1) WM.CT(aa,2)],'color','k','linewidth',2);
-%         plot(WM.SA(aa,1),WM.CT(aa,1),'ok','linewidth',2);
-%         plot(WM.SA(aa,2),WM.CT(aa,2),'ok','linewidth',2);
-%         text(((WM.SA(aa,1)+WM.SA(aa,2))/2),((WM.CT(aa,1)+WM.CT(aa,2))/2),WM.Name(aa),'fontsize',14);
-%     else % if there is just a point
-%         plot(WM.SA(aa,1),WM.CT(aa,1),'+k','linewidth',2);
-%         text(WM.SA(aa,1),WM.CT(aa,1),WM.Name(aa),'fontsize',14);
-%     end
-% end
+% plot water masses
+WM = load('source_WM.mat');
+
+for aa = regional_settings.water_mass_plot
+    if ~isnan(WM.CT(aa,2)) % if there is an upper and lower line
+        line([WM.SA(aa,1) WM.SA(aa,2)],[WM.CT(aa,1) WM.CT(aa,2)],'color','k','linewidth',2);
+        plot(WM.SA(aa,1),WM.CT(aa,1),'ok','linewidth',2);
+        plot(WM.SA(aa,2),WM.CT(aa,2),'ok','linewidth',2);
+        text(((WM.SA(aa,1)+WM.SA(aa,2))/2),((WM.CT(aa,1)+WM.CT(aa,2))/2),WM.Name(aa),'fontsize',14);
+    else % if there is just a point
+        plot(WM.SA(aa,1),WM.CT(aa,1),'+k','linewidth',2);
+        text(WM.SA(aa,1),WM.CT(aa,1),WM.Name(aa),'fontsize',14);
+    end
+end
 
 % Colorbar
 colormap(colours);
@@ -210,26 +219,19 @@ cb = colorbar;
 set(cb,'fontsize',20);
 
 % Axis limits
-if region == 4
-    xlim([34.5 maxs]);
-    ylim([mint maxt]);
+if ~isempty(regional_settings.axis_limits)
+    % [x1 x2 y1 y2];
+    xlim([regional_settings.axis_limits(1) regional_settings.axis_limits(2)]);
+    ylim([regional_settings.axis_limits(3) regional_settings.axis_limits(4)]);
 else
     xlim([mins maxs]);
     ylim([mint maxt]);
 end
-% if ~isempty(regional_settings.axis_limits)
-%     % [x1 x2 y1 y2];
-%     xlim([regional_settings.axis_limits(1) regional_settings.axis_limits(2)]);
-%     ylim([regional_settings.axis_limits(3) regional_settings.axis_limits(4)]);
-% else
-%     xlim([mins maxs]);
-%     ylim([mint maxt]);
-% end
 
 %% print figure
 width  = 1500;  % frame width
 height = 1500;  % frame height
-pngname = (['plots/t_psal/p2_TS_coloured_time_REG_' num2str(region) '_' regional_settings.region_name]);
+pngname = (['plots/p2_TS_coloured_time_REG_' num2str(region) '_' regional_settings.region_name '_TEST']);
 
 % set background color (outside axes)
 set(gcf,'color',[1 1 1]);
