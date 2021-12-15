@@ -7,9 +7,9 @@ addpath(genpath('../other_functions'));
 
 
 regions = [1 2 3 4 5 6 7 8 9 10 11 12]; % repeat for area 9...
-for ii= 2:length(expe)
+for ii= 1:length(expe)
     addpath([in_dir expe{ii}])
-for aa= 1:length(regions)
+for aa= 1screen -:length(regions)
     region = regions(aa); % 2 % 7 % 8
     p2_plot_TS_worker(in_dir,expe{ii},region)
 end

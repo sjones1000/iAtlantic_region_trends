@@ -206,7 +206,7 @@ end
 %% print figure
 width  = 1500;  % frame width
 height = 1500;  % frame height
-pngname = (['plots/t_psal/p2_INALT20_TS_coloured_time_REG_' num2str(region) '_' regional_settings.region_name]);
+pngname = (['plots/t_psal/p2_' expe '_TS_coloured_time_REG_' num2str(region) '_' regional_settings.region_name])
 
 % set background color (outside axes)
 set(gcf,'color',[1 1 1]);
