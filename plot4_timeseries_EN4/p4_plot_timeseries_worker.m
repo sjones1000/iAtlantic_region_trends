@@ -82,24 +82,24 @@ reg.sigma0(bathy_mask==0) = nan;
 
 clear reg.sigma0
 
-%% NEED TO CALCULATE NEUTRAL DENSITY 
-% Need 4D p, can't remember how to repmat higher dims
-reg.p4D = nan*reg.SA;
-for aa = 1:length(reg.time)
-    reg.p4D(:,:,:,aa) = reg.p;
-end
-% Similarly for lon,lat
-[reg.lon4D,reg.lat4D,dum,dum] = ndgrid(reg.lon,reg.lat,reg.depth,reg.time);
-
-% Need to do some pruning otherwise 'out of memory' issues
-clear dum bathy_mask
-reg = rmfield(reg,'sigma0');
-%psal =  gsw_SP_from_SA(SA,p,long,lat)
-% psal_2D = gsw_SP_from_SA(REG.SA,0,nanmean(reg.lon),nanmean(reg.lat)); % We have salinity already in EN4
-% t = gsw_t_from_CT(SA,CT,p)
-reg.temp = gsw_t_from_CT(reg.SA,reg.CT,reg.p4D);
-% gamma_n = eos80_legacy_gamma_n(SP,t,p,long,lat)
-reg.gamma_n = eos80_legacy_gamma_n(reg.S,reg.temp,0*reg.p4D,reg.lon4D,reg.lat4D);
+% %% NEED TO CALCULATE NEUTRAL DENSITY 
+% % Need 4D p, can't remember how to repmat higher dims
+% reg.p4D = nan*reg.SA;
+% for aa = 1:length(reg.time)
+%     reg.p4D(:,:,:,aa) = reg.p;
+% end
+% % Similarly for lon,lat
+% [reg.lon4D,reg.lat4D,dum,dum] = ndgrid(reg.lon,reg.lat,reg.depth,reg.time);
+% 
+% % Need to do some pruning otherwise 'out of memory' issues
+% clear dum bathy_mask
+% reg = rmfield(reg,'sigma0');
+% %psal =  gsw_SP_from_SA(SA,p,long,lat)
+% % psal_2D = gsw_SP_from_SA(REG.SA,0,nanmean(reg.lon),nanmean(reg.lat)); % We have salinity already in EN4
+% % t = gsw_t_from_CT(SA,CT,p)
+% reg.temp = gsw_t_from_CT(reg.SA,reg.CT,reg.p4D);
+% % gamma_n = eos80_legacy_gamma_n(SP,t,p,long,lat)
+% reg.gamma_n = eos80_legacy_gamma_n(reg.S,reg.temp,0*reg.p4D,reg.lon4D,reg.lat4D);
 
 
 %% Main loop below.
@@ -131,10 +131,44 @@ if isfield(regional_settings,'Yn_thresholds') % If we have one or more density t
     
 end
 
-%% Also break down by month
+%% Need to do some basic despiking for EN4 data...
+reject_sds = 4;
+for ww = 1:num_timeseries % for each water mass timeseries
+    
+    t_mean = nanmean(CT_timeseries(ww,:));
+    s_mean = nanmean(SA_timeseries(ww,:));
+    t_sd = nanstd(CT_timeseries(ww,:));
+    s_sd = nanstd(SA_timeseries(ww,:));
+    
+    t_upper = t_mean + (t_sd * reject_sds);
+    t_lower = t_mean - (t_sd * reject_sds);
+    s_upper = s_mean + (s_sd * reject_sds);
+    s_lower = s_mean - (s_sd * reject_sds);
+    
+    % remove spikes
+    ind = find(CT_timeseries(ww,:) > t_upper | CT_timeseries(ww,:) < t_lower);
+    CT_timeseries(ww,ind) = nan;
+    SA_timeseries(ww,ind) = nan;
+    
+    ind = find(SA_timeseries(ww,:) > s_upper | SA_timeseries(ww,:) < s_lower);
+    SA_timeseries(ww,ind) = nan;
+    CT_timeseries(ww,ind) = nan;
+    
+    % Interpolate to fill gaps
+    goodind = find(~isnan(CT_timeseries(ww,:)));
+    % Vq = interp1(X,V,Xq)
+    CT_timeseries(ww,:) = interp1(reg.time(goodind),CT_timeseries(ww,goodind),reg.time);
+    SA_timeseries(ww,:) = interp1(reg.time(goodind),SA_timeseries(ww,goodind),reg.time);
+end
 
+
+
+%% Compute monthly anomalies
 CT_seasonal = nan*ones(num_timeseries,12);
 SA_seasonal = CT_seasonal;
+CT_seasonal_anom = CT_seasonal;
+SA_seasonal_anom = SA_seasonal;
+
 
 for mm = 1:12
    ind = find(reg.month == mm);
@@ -142,47 +176,92 @@ for mm = 1:12
    for ww = 1:num_timeseries % for each water mass timeseries
     CT_seasonal(ww,mm) = nanmean(CT_timeseries(ww,ind));
     SA_seasonal(ww,mm) = nanmean(SA_timeseries(ww,ind));
+    
+
    end
    
 end
 
+for ww = 1:num_timeseries
+    CT_seasonal_anom(ww,:) = CT_seasonal(ww,:) - mean(CT_seasonal(ww,:));
+    SA_seasonal_anom(ww,:) = SA_seasonal(ww,:) - mean(SA_seasonal(ww,:));   
+end
+
+% Subtract monthly anomalies from timeseries
+CT_timeseries_deseasoned = CT_timeseries*nan;
+SA_timeseries_deseasoned = CT_timeseries_deseasoned;
+
+for ww = 1:num_timeseries
+    for mm = 1:12    
+        ind = find(reg.month == mm);   
+        CT_timeseries_deseasoned(ww,ind) = CT_timeseries(ww,ind) - CT_seasonal_anom(ww,mm);
+        SA_timeseries_deseasoned(ww,ind) = SA_timeseries(ww,ind) - SA_seasonal_anom(ww,mm);
+    end
+end
 
 
+% %% 12 month running mean
+% smoothspan = 12;
+% for ww = 1:num_timeseries % for each water mass timeseries
+%     CT_timeseries(ww,:) = smooth(CT_timeseries(ww,:),smoothspan);
+%     SA_timeseries(ww,:) = smooth(SA_timeseries(ww,:),smoothspan);
+%     CT_timeseries(ww,1:smoothspan) = nan;CT_timeseries(ww,end-smoothspan:end) = nan;
+%     SA_timeseries(ww,1:smoothspan) = nan;SA_timeseries(ww,end-smoothspan:end) = nan;
+% end 
+
+%% Annual means
+CT_annual = nan*ones(num_timeseries,length(year));
+SA_annual = CT_annual;
+
+for ww = 1:num_timeseries % for each water mass timeseries
+    for aa = 1:length(year)
+        
+        ind = find(reg.year == year(aa));
+        CT_annual(ww,aa) = nanmean(CT_timeseries_deseasoned(ww,ind));
+        SA_annual(ww,aa) = nanmean(SA_timeseries_deseasoned(ww,ind));
+        
+    end
+end
 
 
-
-
-    
 %% Figures %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%;
 
 %% Timeseries figure
 figure(1)
 clf;
 plot_no = 1;
+% xyears = [datenum('01-01-1980') datenum('01-01-1990') datenum('01-01-2000') datenum('01-01-2010') datenum('01-01-2020')];
+xyears = [1980 1990 2000 2010 2020];
 for nn = 1:num_timeseries
 
     
     %% Tempreature timeseries
     subplot(num_timeseries,2,plot_no); 
-    plot(reg.time,CT_timeseries(nn,:),'k');
+    %plot(reg.time,CT_timeseries(nn,:),'k');
+    plot(year,CT_annual(nn,:),'k','linewidth',2);
     grid on;
-    xlim([datenum(reg.time(1)) datenum(reg.time(end))]);
-    datetick('keepticks','keeplimits');
+    xticks(xyears);
+    % xlim([datenum('01-01-1980') datenum('01-01-2020')]);
+    xlim([1980 2020]);
+    % datetick('keepticks','keeplimits');
     set(gca,'fontsize',14);
     ylabel('Cons. temp (^o C)','fontsize',14);
-    title(['Temperature: ' regional_settings.WM_names(nn)])
+    title([regional_settings.WM_names{nn}])
     
     plot_no = plot_no+1;
     
     %% Salinity timeseries
     subplot(num_timeseries,2,plot_no); 
-    plot(reg.time,SA_timeseries(nn,:),'k');
+    % plot(reg.time,SA_timeseries(nn,:),'k');
+    plot(year,SA_annual(nn,:),'k','linewidth',2);
     grid on;
-    xlim([datenum(reg.time(1)) datenum(reg.time(end))]);
-    datetick('keepticks','keeplimits');
+    xticks(xyears);
+    % xlim([datenum('01-01-1980') datenum('01-01-2020')]);
+    xlim([1980 2020]);
+    % datetick('keepticks','keeplimits');
     set(gca,'fontsize',14);
     ylabel('Abs. Sal. (g / kg)','fontsize',14);
-    title(['Salinity: ' regional_settings.WM_names(nn)])
+    title([regional_settings.WM_names{nn}])
     plot_no = plot_no+1;
 end
 
@@ -235,7 +314,7 @@ for nn = 1:num_timeseries
     set(gca,'fontsize',14);
     xlabel('Month','fontsize',14);
     ylabel('Cons. temp (^o C)','fontsize',14);
-    title(['Temperature: ' regional_settings.WM_names(nn)])
+    title([regional_settings.WM_names{nn}])
     
     plot_no = plot_no+1;
     
@@ -254,7 +333,7 @@ for nn = 1:num_timeseries
     set(gca,'fontsize',14);
     xlabel('Month','fontsize',14);
     ylabel('Abs. Sal. (g / kg)','fontsize',14);
-    title(['Salinity: ' regional_settings.WM_names(nn)])
+    title([regional_settings.WM_names{nn}])
     plot_no = plot_no+1;
 end
 
@@ -265,7 +344,7 @@ end
 %% print figure
 width  = 2000;  % frame width
 height = 2000;  % frame height
-pngname = (['plots/p4_Seasonality_REG_' num2str(region) '_' regional_settings.region_name]);
+pngname = (['plots/seasonality/p4_Seasonality_REG_' num2str(region) '_' regional_settings.region_name]);
 
 % set background color (outside axes)
 set(gcf,'color',[1 1 1]);

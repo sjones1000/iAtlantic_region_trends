@@ -17,7 +17,7 @@ if region == 1
     regional_settings.ylim = [52 74];
     regional_settings.bathy_mask = (bathy > 0);
     regional_settings.sig0_thresholds = [];
-    regional_settings.Yn_thresholds = [27.65 27.8; 27.85 27.975; 27.975 28.05; 28.05 35];
+    regional_settings.Yn_thresholds = [27.65 27.8; 27.85 27.95; 27.95 28.0; 28.0 35];
     regional_settings.WM_names = {'ENACW','LSW','ISOW','DSOW'};
     
 elseif region == 2
@@ -28,7 +28,7 @@ elseif region == 2
     regional_settings.T_thresholds = [];
     regional_settings.S_thresholds = [];
     regional_settings.sig0_thresholds = []; 
-    regional_settings.Yn_thresholds = [27.2 27.45; 27.65 27.75; 27.9 28; 28.05 35];
+    regional_settings.Yn_thresholds = [27.2 27.45; 27.65 27.75; 27.85 27.95; 28.0 35];
     regional_settings.WM_names = {'ENACW','MW','LSW','NEABW'};
     
 elseif region == 3
@@ -37,7 +37,7 @@ elseif region == 3
     regional_settings.ylim = [29 44];
     regional_settings.bathy_mask = (bathy > 0);
     regional_settings.sig0_thresholds = [];
-    regional_settings.Yn_thresholds = [26.5 27.2; 27.5 27.8; 27.9 28; 28 28.1; 28.1 35];
+    regional_settings.Yn_thresholds = [26.5 27.1; 27.5 27.75; 27.85 27.9; 27.9 28; 28 35];
     regional_settings.WM_names = {'ENACW','MW','uNADW','iNADW','NEABW'};
     
 elseif region == 4
@@ -46,7 +46,7 @@ elseif region == 4
     regional_settings.ylim = [40 45];
     regional_settings.bathy_mask = (bathy > 0);
     regional_settings.sig0_thresholds = [];
-    regional_settings.Yn_thresholds = [26.4 27; 27 27.4; 27.9 28; 28 28.1; 28.1 35];
+    regional_settings.Yn_thresholds = [26.4 27; 27 27.4; 27.8 27.9; 27.9 28; 28 35];
     regional_settings.WM_names = {'SBJW','ENACW','uNADW','iNADW','NEABW'};
     
 elseif region == 5
@@ -55,7 +55,7 @@ elseif region == 5
     regional_settings.ylim = [22 39];
     regional_settings.bathy_mask = (bathy > 0);
     regional_settings.sig0_thresholds = [];
-    regional_settings.Yn_thresholds = [25.4 26; 26.3 26.8; 26.8 27.3; 27.5 27.7; 27.9 28; 28 28.1; 28.1 35];
+    regional_settings.Yn_thresholds = [25.4 26; 26.3 26.8; 26.8 27.1; 27.45 27.65; 27.8 27.9; 27.9 28; 28 35];
     regional_settings.WM_names = {'STUW','WNACW','ENACW','AAIW','uNADW','iNADW','NEABW'};
     
 elseif region == 6
@@ -64,7 +64,7 @@ elseif region == 6
     regional_settings.ylim = [11 21];
     regional_settings.bathy_mask = (bathy > 0);
     regional_settings.sig0_thresholds = [];
-    regional_settings.Yn_thresholds = [20 24.5; 24.5 26; 26.3 26.6; 26.6 27.1; 27.4 27.7; 27.75 27.9; 27.9 28; 28.1 35];
+    regional_settings.Yn_thresholds = [20 24.5; 24.5 26; 26.3 26.7; 26.7 27; 27.4 27.65; 27.7 27.85; 27.85 28; 28 35];
     regional_settings.WM_names = {'TSW','STUW','WNACW','ENACW','AAIW','uNADW','iNADW','NEABW'};
     
 elseif region == 7
@@ -73,7 +73,7 @@ elseif region == 7
     regional_settings.ylim = [-3 3.3];
     regional_settings.bathy_mask = (bathy > 0);
     regional_settings.sig0_thresholds = [];
-    regional_settings.Yn_thresholds = [20 24; 24 26; 26.3 26.6; 26.6 27.1; 27.25 27.65; 27.8 27.95; 27.95 28.1; 28.1 35];
+    regional_settings.Yn_thresholds = [20 24; 24 26; 26.3 26.6; 26.6 27; 27.25 27.6; 27.75 27.9; 27.9 28; 28 35];
     regional_settings.WM_names = {'TSW','STUW','WSACW','ESACW','AAIW','uNADW','iNADW','AABW'};
     
 elseif region == 8
@@ -82,7 +82,7 @@ elseif region == 8
     regional_settings.ylim = [-10.5 -4.5];
     regional_settings.bathy_mask = (bathy > 0);
     regional_settings.sig0_thresholds = [];
-    regional_settings.Yn_thresholds = [24 26; 26.3 26.6; 26.6 27.1; 27.25 27.65; 27.85 27.95; 27.95 28.05; 28.05 35];
+    regional_settings.Yn_thresholds = [24 26; 26.3 26.6; 26.6 27; 27.3 27.6; 27.8 27.9; 27.9 28; 28 35];
     regional_settings.WM_names = {'STUW','WSACW','ESACW','AAIW','uNADW','iNADW','AABW'};
     
 elseif region == 9
@@ -91,7 +91,7 @@ elseif region == 9
     regional_settings.ylim = [-38 -19];
     regional_settings.bathy_mask = (bathy > 0);
     regional_settings.sig0_thresholds = [];
-    regional_settings.Yn_thresholds = [26.3 26.6; 26.6 27.1; 27.25 27.65; 27.9 28; 28 28.1; 28.1 35];
+    regional_settings.Yn_thresholds = [26.3 26.6; 26.6 27; 27.25 27.6; 27.85 27.95; 27.95 28.05; 28.05 35];
     regional_settings.WM_names = {'WSACW','ESACW','AAIW','uNADW','iNADW','AABW'};
     
 elseif region == 10
@@ -100,7 +100,7 @@ elseif region == 10
     regional_settings.ylim = [-31 -23];
     regional_settings.bathy_mask = (bathy > 0);
     regional_settings.sig0_thresholds = [];
-    regional_settings.Yn_thresholds = [25 25.8; 26 26.6; 26.6 27.1; 27.25 27.65; 27.9 28; 28 28.1; 28.1 35];
+    regional_settings.Yn_thresholds = [25 25.8; 26 26.6; 26.6 27; 27.2 27.6; 27.8 27.9; 27.9 28; 28 35];
     regional_settings.WM_names = {'STUW','WSACW','ESACW','AAIW','uNADW','iNADW','AABW'};
     
 elseif region == 11
@@ -109,7 +109,7 @@ elseif region == 11
     regional_settings.ylim = [-24 -18];
     regional_settings.bathy_mask = (bathy > 0);
     regional_settings.sig0_thresholds = [];
-    regional_settings.Yn_thresholds = [25 25.7; 26 26.6; 26.6 27.1; 27.25 27.65; 27.9 28; 28 28.1; 28.1 35];
+    regional_settings.Yn_thresholds = [25 25.7; 26 26.6; 26.6 27; 27.25 27.6; 27.8 27.9; 27.9 28; 28 35];
     regional_settings.WM_names = {'STUW','WSACW','ESACW','AAIW','uNADW','iNADW','AABW'};
     
 elseif region == 12
@@ -118,7 +118,7 @@ elseif region == 12
     regional_settings.ylim = [-40 -36];
     regional_settings.bathy_mask = (bathy > 0);
     regional_settings.sig0_thresholds = [];
-    regional_settings.Yn_thresholds = [25.9 26.9; 26.9 27.1; 27.25 27.55; 27.9 28; 28 28.1; 28.1 35];
+    regional_settings.Yn_thresholds = [25.9 26.9; 26.9 27.1; 27.25 27.5; 27.85 27.95; 27.95 28.05; 28.05 35];
     regional_settings.WM_names = {'SASW','ESACW','AAIW','uNADW','iNADW','AABW'};
 end
 
