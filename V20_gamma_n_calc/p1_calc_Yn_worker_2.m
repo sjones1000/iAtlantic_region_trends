@@ -28,13 +28,18 @@ tmask = repmat(tmask,1,1,1);
 sal(tmask==0)=NaN; temp(tmask==0)=NaN;
 clear tmask
 
-z2d = z2d*-1;
+sal = sal(1:350,201:end,:,:);
+temp = temp(1:350,201:end,:,:);
+
+z2d = z2d(1:350,201:end,:).*-1;
 
 
 % Need a 4d depth var
 % 
-lon4d = repmat(lon2d,1,1,zN);
-lat4d = repmat(lat2d,1,1,zN);
+lon4d = repmat(lon2d(1:350,201:end),1,1,zN);
+lat4d = repmat(lat2d(1:350,201:end),1,1,zN);
+x=x(1:350);
+y=y(201:end);
 % Calc pressure
 % p = gsw_p_from_z(z,lat);
 press = gsw_p_from_z(z2d,lat4d);
@@ -48,10 +53,10 @@ parfor (mm=1:tN,4)
         S3d = squeeze(sal(:,:,:,mm));
 
 	gamma_n(:,:,:,mm) = eos80_legacy_gamma_n(S3d,T3d,press,lon4d,lat4d);
-        disp(['Month ' num2str(mm)])
+        disp(['Month ' num2str(mm) ' *Comment out when not needed*'])
 end
     %% Write netcdf
-    fileout = [out_dir,file]; % <- Save data location
+    fileout = [out_dir,file(1:end-3),'_2.nc']; % <- Save data location
     ncid = netcdf.create(fileout,'NETCDF4'); % open ncfile
     
     % Create dimensions

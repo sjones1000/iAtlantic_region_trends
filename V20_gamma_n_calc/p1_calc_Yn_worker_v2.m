@@ -1,4 +1,4 @@
-function p1_calc_Yn_worker(path,file,out_dir)
+function p1_calc_Yn_worker_v2(path,file,out_dir)
 addpath(genpath('/gxfs_work1/geomar/smomw294/iAtlantic/Subprojects/iAtlantic_region_trends/other_functions'));
 
 disp(['************** Working on Region ' file ' *******************']);
@@ -28,30 +28,43 @@ tmask = repmat(tmask,1,1,1);
 sal(tmask==0)=NaN; temp(tmask==0)=NaN;
 clear tmask
 
-z2d = z2d*-1;
+i_min = 351; i_max = xN;
+j_min = 201; j_max = yN; 
+
+sal = sal(i_min:i_max,j_min:j_max,:,:);
+temp = temp(i_min:i_max,j_min:j_max,:,:);
+
+z2d = z2d(i_min:i_max,j_min:j_max,:).*-1;
 
 
 % Need a 4d depth var
 % 
-lon4d = repmat(lon2d,1,1,zN);
-lat4d = repmat(lat2d,1,1,zN);
+lon4d = repmat(lon2d(i_min:i_max,j_min:j_max),1,1,zN);
+lat4d = repmat(lat2d(i_min:i_max,j_min:j_max),1,1,zN);
+x=x(i_min:i_max);
+y=y(j_min:j_max);
 % Calc pressure
 % p = gsw_p_from_z(z,lat);
 press = gsw_p_from_z(z2d,lat4d);
 gamma_n = temp.*NaN;
 
-parpool(4)
-maxNumCompThreads(4)
-parfor (mm=1:tN,4)
+% parpool(4)
+% maxNumCompThreads(4)
+% parfor (mm=1:tN,4)
+for mm=1:tN
 	% Calc annual mean
         T3d = squeeze(temp(:,:,:,mm));
         S3d = squeeze(sal(:,:,:,mm));
+        z3d = squeeze(press(:,:,:));
+        y3d = squeeze(lat4d(:,:,:));
+        x3d = squeeze(lon4d(:,:,:));
 
-	gamma_n(:,:,:,mm) = eos80_legacy_gamma_n(S3d,T3d,press,lon4d,lat4d);
-        disp(['Month ' num2str(mm)])
+	gamma_n(:,:,:,mm) = eos80_legacy_gamma_n(S3d,T3d,...
+        z3d,x3d,y3d);
+        disp(['Month ' num2str(mm) ])
 end
     %% Write netcdf
-    fileout = [out_dir,file]; % <- Save data location
+    fileout = [out_dir,file(1:end-3),'_4.nc']; % <- Save data location
     ncid = netcdf.create(fileout,'NETCDF4'); % open ncfile
     
     % Create dimensions
@@ -96,8 +109,8 @@ end
     
     netcdf.close(ncid)
     
-    poolobj = gcp('nocreate')
-    delete(poolobj);
+%     poolobj = gcp('nocreate')
+%     delete(poolobj);
     
     disp(['Completed ' file]);
     toc
