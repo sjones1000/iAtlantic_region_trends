@@ -44,7 +44,7 @@ function [gamma_n, gamma_error_lower, gamma_error_upper] = eos80_legacy_gamma_n_
 %
 % REFERENCES:
 %  Jackett, D.R., and T.J. McDougall, 1997: A Neutral Density Variable for
-%   the World's Oceans. J. Phys. Oceanogr., 27, pp. 237–263.
+%   the World's Oceans. J. Phys. Oceanogr., 27, pp. 237ï¿½263.
 %
 %  The software is available from http://www.TEOS-10.org
 %
@@ -116,10 +116,10 @@ for I = 2:nz
     Iz3(p_ntp3 >= p_ref(I-1) & p_ntp3 < p_ref(I)) = I - 1;    
     Iz4(p_ntp4 >= p_ref(I-1) & p_ntp4 < p_ref(I)) = I - 1;     
 end
-Iz1(p_ntp1 == p_ref(nz)) = nz; 
-Iz2(p_ntp2 == p_ref(nz)) = nz; 
-Iz3(p_ntp3 == p_ref(nz)) = nz; 
-Iz4(p_ntp4 == p_ref(nz)) = nz; 
+Iz1(p_ntp1 == p_ref(nz)) = nz-1; 
+Iz2(p_ntp2 == p_ref(nz)) = nz-1; 
+Iz3(p_ntp3 == p_ref(nz)) = nz-1; 
+Iz4(p_ntp4 == p_ref(nz)) = nz-1; 
 
 % calculate the indicies for each of the 4 surrounding non-NaN npt's. 
 I1z_nn = find(~isnan(Iz1));
