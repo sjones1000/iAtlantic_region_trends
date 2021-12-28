@@ -82,7 +82,7 @@ reg.sigma0(bathy_mask==0) = nan;
 
 clear reg.sigma0
 
-% %% NEED TO CALCULATE NEUTRAL DENSITY 
+% %% NEED TO CALCULATE NEUTRAL DENSITY, now pre-calculated in EN4 files
 % % Need 4D p, can't remember how to repmat higher dims
 % reg.p4D = nan*reg.SA;
 % for aa = 1:length(reg.time)
@@ -224,7 +224,126 @@ for ww = 1:num_timeseries % for each water mass timeseries
 end
 
 
-%% Figures %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%;
+%% Calculate trend and confidence intervals
+
+for ww = 1:num_timeseries % for each water mass timeseries
+    
+    %% %%%%%%%%%%%%%% Linear regression: CT  %%%%%%%%%%%%%%%%%%%
+    X = year'; tempones = ones(length(X),1); X = [X tempones]; % stats output requires a column of ones to be appended to X
+    y = CT_annual(ww,:)';
+    %[b,bint,r,rint,stats] = regress(y,X)    X is predictors, eg. year; y is responses, eg. salinity
+    [b,bint,r,rint,stats] = regress(y,X);
+    CT_lin_fit(ww,:) = b(2)+b(1)*year;
+    CT_grad = b(1); CT_intercept = b(2);
+    
+    % Note that an anticorrelation also returns positive values of R-squared.
+    %rsquared = stats(1);
+    %pval = stats(3);
+    
+    % Get plot confidence intervals
+    beta = [b(2) b(1)];
+    [CT_upp_bound(ww,:),CT_low_bound(ww,:),xvals] = regression_line_ci(0.05,beta,X(:,1),y,(length(year)-1)); % for 95% confindence interval
+    clear b bint r rint stats X y
+    
+    %% Regression analysis assuming 1D variable (dim = 1xN, Kristin code 161221)
+    yfit1 = CT_lin_fit(ww,:); %this is the trend time series
+    y = CT_annual(ww,:); %this is the data time series
+    %t-value – find doef
+    y_xc = xcorr(y-nanmean(y(:)),'coeff'); %autocorrelation
+    y_xc = y_xc(ceil(length(y_xc)/2)+1:end); %only positive values
+    deof_y = round(length(y)/find(y_xc<=1/exp(1),1,'first')); %deof are (number of obs)/(decorrelation or e-folding timescale)
+    alphaup =  1-0.05/2; %1-0.05/2;
+    t_crit_y = tinv(alphaup,deof_y); %find t_crit through matlab function
+    
+    yresid1 = y - yfit1;
+    S2_e = (1/(deof_y-2)) * sum(yresid1.^2); % (eq. 1.33 on page 48 of internet doc)
+    S_a = sqrt(S2_e / (sum((y-nanmean(y)).^2))); % (eq. 1.34 on page 48)
+    % SJ NOTE: THE ABOVE COUPLE OF LINES SEEMS TO RESULT IN VALUES TOO
+    % LARGE TO RESULT IN TEST PASSES. INVESTIGATE! (see https://o2.eas.gatech.edu/courses/EAS2655/week5.pdf)
+    
+    % significance test, t-test, 95% interval, H_0: R=0.0
+    t1 = beta(2)/S_a; % (eq. 135 on page 48)
+    
+    % if 1: test is significant; 0: test is not significant
+    if t_crit_y<abs(t1)
+        CT_significant = 1;
+    else
+        CT_significant=0;
+    end
+    
+    
+    
+    
+    
+    %% %%%%%%%%%%%%%% Linear regression: SA  %%%%%%%%%%%%%%%%%%%
+    X = year'; tempones = ones(length(X),1); X = [X tempones]; % stats output requires a column of ones to be appended to X
+    y = SA_annual(ww,:)';
+    %[b,bint,r,rint,stats] = regress(y,X)    X is predictors, eg. year; y is responses, eg. salinity
+    [b,bint,r,rint,stats] = regress(y,X);
+    SA_lin_fit(ww,:) = b(2)+b(1)*year;
+    SA_grad = b(1); SA_intercept = b(2);
+    
+    % Note that an anticorrelation also returns positive values of R-squared.
+    %     rsquared = stats(1);
+    %     pval = stats(3);
+    
+    % Get confidence intervals!
+    beta = [b(2) b(1)];
+    [SA_upp_bound(ww,:),SA_low_bound(ww,:),xvals] = regression_line_ci(0.05,beta,X(:,1),y,(length(year)-1)); % for 95% confindence interval
+    clear b bint r rint stats X y
+    
+    %% Regression analysis assuming 1D variable (dim = 1xN, Kristin code 161221)
+    yfit1 = SA_lin_fit(ww,:); %this is the trend time series
+    y = SA_annual(ww,:); %this is the data time series
+    %t-value – find doef
+    y_xc = xcorr(y-nanmean(y(:)),'coeff'); %autocorrelation
+    y_xc = y_xc(ceil(length(y_xc)/2)+1:end); %only positive values
+    deof_y = round(length(y)/find(y_xc<=1/exp(1),1,'first')); %deof are (number of obs)/(decorrelation or e-folding timescale)
+    alphaup =  1-0.05/2; %1-0.05/2;
+    t_crit_y = tinv(alphaup,deof_y); %find t_crit through matlab function
+    
+    yresid1 = y - yfit1;
+    S2_e = (1/(deof_y-2)) * sum(yresid1.^2); % (eq. 1.33 on page 48 of internet doc)
+    S_a = sqrt(S2_e / (sum((y-nanmean(y)).^2))); % (eq. 1.34 on page 48)
+    % SJ NOTE: THE ABOVE COUPLE OF LINES SEEMS TO RESULT IN VALUES TOO
+    % LARGE TO RESULT IN TEST PASSES. INVESTIGATE! (see https://o2.eas.gatech.edu/courses/EAS2655/week5.pdf)
+    
+    % significance test, t-test, 95% interval, H_0: R=0.0
+    t1 = beta(2)/S_a; % (eq. 135 on page 48)
+    
+    % if 1: test is significant; 0: test is not significant
+    if t_crit_y<abs(t1)
+        SA_significant = 1;
+    else
+        SA_significant=0;
+    end
+    
+    
+    
+    %% Report stats to csv
+    % [water mass number CT_gradient(deg/yr) CT_intercept CT_significant SA_gradient(gkg-1/yr) SA_intercept SA_significant]
+    M(ww,:) = [ww CT_grad CT_intercept CT_significant SA_grad SA_intercept SA_significant];
+    % M(ww,:) = [ww CT_grad CT_intercept SA_grad SA_intercept];
+    
+end
+
+
+
+
+
+
+
+
+
+%% Figures and tables %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%;
+
+%% Save stats table
+% dlmwrite('FILENAME',M)
+dlmwrite(['plots/EN4_timeseries_REG_' num2str(region) '_' regional_settings.region_name '_STATS.csv'],M)
+
+
+
+
 
 %% Timeseries figure
 figure(1)
@@ -237,8 +356,17 @@ for nn = 1:num_timeseries
     
     %% Tempreature timeseries
     subplot(num_timeseries,2,plot_no); 
+    hold on
+    
+    % plot linear fit and CIs
+    patchX = [year year(end:-1:1)];
+    patchY = [CT_upp_bound(nn,:) CT_low_bound(nn,end:-1:1)];
+    patch(patchX,patchY,[0.5 0.5 0.5],'LineStyle','none'); alpha(0.3);
+    plot(year,CT_lin_fit(nn,:),'color',[0.5 0.5 0.5],'linewidth',2);
+    
     %plot(reg.time,CT_timeseries(nn,:),'k');
     plot(year,CT_annual(nn,:),'k','linewidth',2);
+    
     grid on;
     xticks(xyears);
     % xlim([datenum('01-01-1980') datenum('01-01-2020')]);
@@ -252,6 +380,14 @@ for nn = 1:num_timeseries
     
     %% Salinity timeseries
     subplot(num_timeseries,2,plot_no); 
+    hold on
+    
+    % plot linear fit and CIs
+    patchX = [year year(end:-1:1)];
+    patchY = [SA_upp_bound(nn,:) SA_low_bound(nn,end:-1:1)];
+    patch(patchX,patchY,[0.5 0.5 0.5],'LineStyle','none'); alpha(0.3);
+    plot(year,SA_lin_fit(nn,:),'color',[0.5 0.5 0.5],'linewidth',2);
+    
     % plot(reg.time,SA_timeseries(nn,:),'k');
     plot(year,SA_annual(nn,:),'k','linewidth',2);
     grid on;
@@ -292,74 +428,78 @@ print('-dpng', ['-r' num2str(resolution)], '-opengl', pngname);
 
 
 
-%% Seasonality figure
-figure(2)
-clf;
-plot_no = 1;
-for nn = 1:num_timeseries
+% %% Seasonality figure
+% figure(2)
+% clf;
+% plot_no = 1;
+% for nn = 1:num_timeseries
+% 
+%     
+%     %% Tempreature seasonality
+%     subplot(num_timeseries,2,plot_no); 
+%     hold on
+%     % plot individual years in grey
+%     for yy = min(reg.year):max(reg.year)
+%         ind = find(reg.year == yy);   
+%         plot(reg.month(ind),CT_timeseries(nn,ind),'color',[0.7 0.7 0.7]);
+%     end
+%     % plot monthly mean
+%     plot(1:12,CT_seasonal(nn,:),'k','linewidth',2);
+%     grid on;
+%     xlim([1 12]);
+%     set(gca,'fontsize',14);
+%     xlabel('Month','fontsize',14);
+%     ylabel('Cons. temp (^o C)','fontsize',14);
+%     title([regional_settings.WM_names{nn}])
+%     
+%     plot_no = plot_no+1;
+%     
+%     %% Salinity seasonality
+%     subplot(num_timeseries,2,plot_no); 
+%     hold on
+%     % plot individual years in grey
+%     for yy = min(reg.year):max(reg.year)
+%         ind = find(reg.year == yy);   
+%         plot(reg.month(ind),SA_timeseries(nn,ind),'color',[0.7 0.7 0.7]);
+%     end
+%     % plot monthly mean
+%     plot(1:12,SA_seasonal(nn,:),'k','linewidth',2);
+%     grid on;
+%     xlim([1 12]);
+%     set(gca,'fontsize',14);
+%     xlabel('Month','fontsize',14);
+%     ylabel('Abs. Sal. (g / kg)','fontsize',14);
+%     title([regional_settings.WM_names{nn}])
+%     plot_no = plot_no+1;
+% end
+% 
+% 
+% 
+% 
+% 
+% %% print figure
+% width  = 2000;  % frame width
+% height = 2000;  % frame height
+% pngname = (['plots/seasonality/p4_Seasonality_REG_' num2str(region) '_' regional_settings.region_name]);
+% 
+% % set background color (outside axes)
+% set(gcf,'color',[1 1 1]);
+% 
+% % don't change background color when printing
+% set(gcf,'inverthardcopy','off');
+% 
+% % set size of frame to be written
+% resolution=150;
+% set(gcf,'paperunits','inches');
+% set(gcf,'paperposition',[0 0 width height]./resolution);
+% 
+% % write .png file
+% % the 'zbuffer' method is likely to look similar to the plot window
+% print('-dpng', ['-r' num2str(resolution)], '-opengl', pngname);
 
-    
-    %% Tempreature seasonality
-    subplot(num_timeseries,2,plot_no); 
-    hold on
-    % plot individual years in grey
-    for yy = min(reg.year):max(reg.year)
-        ind = find(reg.year == yy);   
-        plot(reg.month(ind),CT_timeseries(nn,ind),'color',[0.7 0.7 0.7]);
-    end
-    % plot monthly mean
-    plot(1:12,CT_seasonal(nn,:),'k','linewidth',2);
-    grid on;
-    xlim([1 12]);
-    set(gca,'fontsize',14);
-    xlabel('Month','fontsize',14);
-    ylabel('Cons. temp (^o C)','fontsize',14);
-    title([regional_settings.WM_names{nn}])
-    
-    plot_no = plot_no+1;
-    
-    %% Salinity seasonality
-    subplot(num_timeseries,2,plot_no); 
-    hold on
-    % plot individual years in grey
-    for yy = min(reg.year):max(reg.year)
-        ind = find(reg.year == yy);   
-        plot(reg.month(ind),SA_timeseries(nn,ind),'color',[0.7 0.7 0.7]);
-    end
-    % plot monthly mean
-    plot(1:12,SA_seasonal(nn,:),'k','linewidth',2);
-    grid on;
-    xlim([1 12]);
-    set(gca,'fontsize',14);
-    xlabel('Month','fontsize',14);
-    ylabel('Abs. Sal. (g / kg)','fontsize',14);
-    title([regional_settings.WM_names{nn}])
-    plot_no = plot_no+1;
-end
 
 
 
-
-
-%% print figure
-width  = 2000;  % frame width
-height = 2000;  % frame height
-pngname = (['plots/seasonality/p4_Seasonality_REG_' num2str(region) '_' regional_settings.region_name]);
-
-% set background color (outside axes)
-set(gcf,'color',[1 1 1]);
-
-% don't change background color when printing
-set(gcf,'inverthardcopy','off');
-
-% set size of frame to be written
-resolution=150;
-set(gcf,'paperunits','inches');
-set(gcf,'paperposition',[0 0 width height]./resolution);
-
-% write .png file
-% the 'zbuffer' method is likely to look similar to the plot window
-print('-dpng', ['-r' num2str(resolution)], '-opengl', pngname);
 
 toc
 
