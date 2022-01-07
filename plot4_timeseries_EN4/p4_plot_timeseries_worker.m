@@ -237,8 +237,8 @@ for ww = 1:num_timeseries % for each water mass timeseries
     CT_grad = b(1); CT_intercept = b(2);
     
     % Note that an anticorrelation also returns positive values of R-squared.
-    %rsquared = stats(1);
-    %pval = stats(3);
+    % rsquared = stats(1);
+    % pval = stats(3);
     
     % Get plot confidence intervals
     beta = [b(2) b(1)];
@@ -255,21 +255,25 @@ for ww = 1:num_timeseries % for each water mass timeseries
     alphaup =  1-0.05/2; %1-0.05/2;
     t_crit_y = tinv(alphaup,deof_y); %find t_crit through matlab function
     
-    yresid1 = y - yfit1;
-    S2_e = (1/(deof_y-2)) * sum(yresid1.^2); % (eq. 1.33 on page 48 of internet doc)
-    S_a = sqrt(S2_e / (sum((y-nanmean(y)).^2))); % (eq. 1.34 on page 48)
-    % SJ NOTE: THE ABOVE COUPLE OF LINES SEEMS TO RESULT IN VALUES TOO
-    % LARGE TO RESULT IN TEST PASSES. INVESTIGATE! (see https://o2.eas.gatech.edu/courses/EAS2655/week5.pdf)
+    yresid = y - yfit1; % get residuals
+    yresid1 = sum(yresid.^2); % sum of the squared residuals
+    ytotal1 = (length(y)-1) * var(y); % n * variance
+    
+    % adjusted coefficient of determination
+    rsq_y = 1 - yresid1/ytotal1*(length(y)-1)/(length(y)-2);
+    %rsq_y = rsquared;
     
     % significance test, t-test, 95% interval, H_0: R=0.0
-    t1 = beta(2)/S_a; % (eq. 135 on page 48)
-    
-    % if 1: test is significant; 0: test is not significant
+    t1 = sqrt((rsq_y*(deof_y-2))/(1-rsq_y));
     if t_crit_y<abs(t1)
         CT_significant = 1;
     else
-        CT_significant=0;
+        CT_significant = 0;
     end
+    
+    clear y_xc deof_y alphaup t_crit_y yresid yresid1 ytotal1 rsq_y t1
+    
+
     
     
     
@@ -302,28 +306,27 @@ for ww = 1:num_timeseries % for each water mass timeseries
     alphaup =  1-0.05/2; %1-0.05/2;
     t_crit_y = tinv(alphaup,deof_y); %find t_crit through matlab function
     
-    yresid1 = y - yfit1;
-    S2_e = (1/(deof_y-2)) * sum(yresid1.^2); % (eq. 1.33 on page 48 of internet doc)
-    S_a = sqrt(S2_e / (sum((y-nanmean(y)).^2))); % (eq. 1.34 on page 48)
-    % SJ NOTE: THE ABOVE COUPLE OF LINES SEEMS TO RESULT IN VALUES TOO
-    % LARGE TO RESULT IN TEST PASSES. INVESTIGATE! (see https://o2.eas.gatech.edu/courses/EAS2655/week5.pdf)
+    yresid = y - yfit1; % get residuals
+    yresid1 = sum(yresid.^2); % sum of the squared residuals
+    ytotal1 = (length(y)-1) * var(y); % n * variance
+    
+    % adjusted coefficient of determination
+    rsq_y = 1 - yresid1/ytotal1*(length(y)-1)/(length(y)-2);
+    %rsq_y = rsquared;    
     
     % significance test, t-test, 95% interval, H_0: R=0.0
-    t1 = beta(2)/S_a; % (eq. 135 on page 48)
-    
-    % if 1: test is significant; 0: test is not significant
+    t1 = sqrt((rsq_y*(deof_y-2))/(1-rsq_y));
     if t_crit_y<abs(t1)
         SA_significant = 1;
     else
-        SA_significant=0;
+        SA_significant = 0;
     end
     
-    
+    clear y_xc deof_y alphaup t_crit_y yresid yresid1 ytotal1 rsq_y t1
     
     %% Report stats to csv
-    % [water mass number CT_gradient(deg/yr) CT_intercept CT_significant SA_gradient(gkg-1/yr) SA_intercept SA_significant]
-    M(ww,:) = [ww CT_grad CT_intercept CT_significant SA_grad SA_intercept SA_significant];
-    % M(ww,:) = [ww CT_grad CT_intercept SA_grad SA_intercept];
+    % [water mass number CT_gradient(deg/decade) CT_significant SA_gradient(gkg-1/decade) SA_significant]
+    M(ww,:) = [ww CT_grad.*10 CT_significant SA_grad.*10 SA_significant];
     
 end
 
