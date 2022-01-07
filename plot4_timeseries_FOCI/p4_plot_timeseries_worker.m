@@ -19,6 +19,8 @@ x = ncread(filename,'x');
 y = ncread(filename,'y');
 lon2d = ncread(filename,'glamt');
 lat2d = ncread(filename,'gphit');
+tmask = ncread(filename,'tmask');
+tmask = repmat(tmask,1,1,1,12);
 dx2d = ncread(filename,'e1t');
 dy2d = ncread(filename,'e2t');
 bathyind = ncread(filename,'mbathy');
@@ -88,8 +90,8 @@ for yy = 1:length(filelist) % for each year netcdf
     time = time + basetime;
     
     % Set values inside bathy from 0 to nan.
-    T(T==0) = nan;
-    S(S==0) = nan;
+    T(tmask==0) = nan;
+    S(tmask==0) = nan;
     
     Yn_filename = [path,expe,'/gamma_n/',files_gn(yy).name];
     gamma_n = ncread(Yn_filename,'gamma_n');
@@ -250,34 +252,34 @@ for ww = 1:num_timeseries % for each water mass timeseries
     clear b bint r rint stats X y
     
     %% Regression analysis assuming 1D variable (dim = 1xN, Kristin code 161221)
-%     yfit1 = CT_lin_fit(ww,:); %this is the trend time series
-%     y = CT_annual(ww,:); %this is the data time series
-%     %t-value � find doef
-%     y_xc = xcorr(y-nanmean(y(:)),'coeff'); %autocorrelation
-%     y_xc = y_xc(ceil(length(y_xc)/2)+1:end); %only positive values
-%     deof_y = round(length(y)/find(y_xc<=1/exp(1),1,'first')); %deof are (number of obs)/(decorrelation or e-folding timescale)
-%     alphaup =  1-0.05/2; %1-0.05/2;
-%     t_crit_y = tinv(alphaup,deof_y); %find t_crit through matlab function
-%     
-%     yresid1 = y - yfit1;
-%     S2_e = (1/(deof_y-2)) * sum(yresid1.^2); % (eq. 1.33 on page 48 of internet doc)
-%     S_a = sqrt(S2_e / (sum((y-nanmean(y)).^2))); % (eq. 1.34 on page 48)
-%     % SJ NOTE: THE ABOVE COUPLE OF LINES SEEMS TO RESULT IN VALUES TOO
-%     % LARGE TO RESULT IN TEST PASSES. INVESTIGATE! (see https://o2.eas.gatech.edu/courses/EAS2655/week5.pdf)
-%     
-%     % significance test, t-test, 95% interval, H_0: R=0.0
-%     t1 = beta(2)/S_a; % (eq. 135 on page 48)
-%     
-%     % if 1: test is significant; 0: test is not significant
-%     if t_crit_y<abs(t1)
-%         CT_significant = 1;
-%     else
-%         CT_significant=0;
-%     end
-%     
-%     
-%     
-%     
+    yfit1 = CT_lin_fit(ww,:); %this is the trend time series
+    y = CT_annual(ww,:); %this is the data time series
+    %t-value � find doef
+    y_xc = xcorr(y-nanmean(y(:)),'coeff'); %autocorrelation
+    y_xc = y_xc(ceil(length(y_xc)/2)+1:end); %only positive values
+    deof_y = round(length(y)/find(y_xc<=1/exp(1),1,'first')); %deof are (number of obs)/(decorrelation or e-folding timescale)
+    alphaup =  1-0.05/2; %1-0.05/2;
+    t_crit_y = tinv(alphaup,deof_y); %find t_crit through matlab function
+    
+    yresid1 = y - yfit1;
+    S2_e = (1/(deof_y-2)) * sum(yresid1.^2); % (eq. 1.33 on page 48 of internet doc)
+    S_a = sqrt(S2_e / (sum((y-nanmean(y)).^2))); % (eq. 1.34 on page 48)
+    % SJ NOTE: THE ABOVE COUPLE OF LINES SEEMS TO RESULT IN VALUES TOO
+    % LARGE TO RESULT IN TEST PASSES. INVESTIGATE! (see https://o2.eas.gatech.edu/courses/EAS2655/week5.pdf)
+    
+    % significance test, t-test, 95% interval, H_0: R=0.0
+    t1 = beta(2)/S_a; % (eq. 135 on page 48)
+    
+    % if 1: test is significant; 0: test is not significant
+    if t_crit_y<abs(t1)
+        CT_significant = 1;
+    else
+        CT_significant=0;
+    end
+    
+    
+    
+    
     
     %% %%%%%%%%%%%%%% Linear regression: SA  %%%%%%%%%%%%%%%%%%%
     X = year'; tempones = ones(length(X),1); X = [X tempones]; % stats output requires a column of ones to be appended to X
@@ -297,37 +299,37 @@ for ww = 1:num_timeseries % for each water mass timeseries
     clear b bint r rint stats X y
     
 %     %% Regression analysis assuming 1D variable (dim = 1xN, Kristin code 161221)
-%     yfit1 = SA_lin_fit(ww,:); %this is the trend time series
-%     y = SA_annual(ww,:); %this is the data time series
-%     %t-value � find doef
-%     y_xc = xcorr(y-nanmean(y(:)),'coeff'); %autocorrelation
-%     y_xc = y_xc(ceil(length(y_xc)/2)+1:end); %only positive values
-%     deof_y = round(length(y)/find(y_xc<=1/exp(1),1,'first')); %deof are (number of obs)/(decorrelation or e-folding timescale)
-%     alphaup =  1-0.05/2; %1-0.05/2;
-%     t_crit_y = tinv(alphaup,deof_y); %find t_crit through matlab function
-%     
-%     yresid1 = y - yfit1;
-%     S2_e = (1/(deof_y-2)) * sum(yresid1.^2); % (eq. 1.33 on page 48 of internet doc)
-%     S_a = sqrt(S2_e / (sum((y-nanmean(y)).^2))); % (eq. 1.34 on page 48)
-%     % SJ NOTE: THE ABOVE COUPLE OF LINES SEEMS TO RESULT IN VALUES TOO
-%     % LARGE TO RESULT IN TEST PASSES. INVESTIGATE! (see https://o2.eas.gatech.edu/courses/EAS2655/week5.pdf)
-%     
-%     % significance test, t-test, 95% interval, H_0: R=0.0
-%     t1 = beta(2)/S_a; % (eq. 135 on page 48)
-%     
-%     % if 1: test is significant; 0: test is not significant
-%     if t_crit_y<abs(t1)
-%         SA_significant = 1;
-%     else
-%         SA_significant=0;
-%     end
-%     
+    yfit1 = SA_lin_fit(ww,:); %this is the trend time series
+    y = SA_annual(ww,:); %this is the data time series
+    %t-value � find doef
+    y_xc = xcorr(y-nanmean(y(:)),'coeff'); %autocorrelation
+    y_xc = y_xc(ceil(length(y_xc)/2)+1:end); %only positive values
+    deof_y = round(length(y)/find(y_xc<=1/exp(1),1,'first')); %deof are (number of obs)/(decorrelation or e-folding timescale)
+    alphaup =  1-0.05/2; %1-0.05/2;
+    t_crit_y = tinv(alphaup,deof_y); %find t_crit through matlab function
+    
+    yresid1 = y - yfit1;
+    S2_e = (1/(deof_y-2)) * sum(yresid1.^2); % (eq. 1.33 on page 48 of internet doc)
+    S_a = sqrt(S2_e / (sum((y-nanmean(y)).^2))); % (eq. 1.34 on page 48)
+    % SJ NOTE: THE ABOVE COUPLE OF LINES SEEMS TO RESULT IN VALUES TOO
+    % LARGE TO RESULT IN TEST PASSES. INVESTIGATE! (see https://o2.eas.gatech.edu/courses/EAS2655/week5.pdf)
+    
+    % significance test, t-test, 95% interval, H_0: R=0.0
+    t1 = beta(2)/S_a; % (eq. 135 on page 48)
+    
+    % if 1: test is significant; 0: test is not significant
+    if t_crit_y<abs(t1)
+        SA_significant = 1;
+    else
+        SA_significant=0;
+    end
+    
     
     
     %% Report stats to csv
     % [water mass number CT_gradient(deg/yr) CT_intercept CT_significant SA_gradient(gkg-1/yr) SA_intercept SA_significant]
-%     M(ww,:) = [ww CT_grad CT_intercept CT_significant SA_grad SA_intercept SA_significant];
-    M(ww,:) = [ww CT_grad CT_intercept SA_grad SA_intercept];
+    M(ww,:) = [ww CT_grad CT_intercept CT_significant SA_grad SA_intercept SA_significant];
+%     M(ww,:) = [ww CT_grad CT_intercept SA_grad SA_intercept];
     
 end
 
@@ -358,7 +360,7 @@ xyears = [1980 1990 2000 2010 2020];
 for nn = 1:num_timeseries
 
     
-    %% Tempreature timeseries
+    %% Temperature timeseries
     subplot(num_timeseries,2,plot_no); 
     hold on
     

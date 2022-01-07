@@ -8,7 +8,7 @@ expe = {'FOCI1.14-II010','FOCI1.14-II011','FOCI1.14-JH027','FOCI1.19-JH037','FOC
 
 regions = [1:12]; % 12
 
-for ii= 4 %:length(expe)
+for ii= 1 %:length(expe)
     addpath([in_dir expe{ii}])
 for aa= 1 %:length(regions)
     region = regions(aa); % 2 % 7 % 8
