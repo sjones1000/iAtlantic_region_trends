@@ -1,15 +1,17 @@
-function p4_plot_timeseries_worker(path,expe,region)
+function p4_plot_timeseries_worker(path,region)
 disp(['Working on region ' num2str(region)]);
 tic
 
-filelist= dir([path expe '/' '*_reg' num2str(region) '.nc']);
-files_gn=dir([path,expe,'/gamma_n/','*_reg' num2str(region) '.nc']);
+expe = {'FOCI1.14-II010','FOCI1.14-II011','FOCI1.14-JH027','FOCI1.19-JH037','FOCI1.19-JH039','FOCI1.14-SW128'};
+eN = length(expe);
 year = 2014:2070;
-%season = [1 2 3; 4 5 6; 7 8 9; 10 11 12];
-%season_names = ['JFM';'AMJ';'JAS';'OND'];
 basetime = datenum('01-01-1900');
-% plotdepths = [0 200 500 1000 2000];
-% colours = (pmkmp(41,'CubicL'));
+
+exp_idx=1;
+addpath([path expe{exp_idx}])
+filelist= dir([path expe{exp_idx} '/' '*_reg' num2str(region) '.nc']);
+files_gn=dir([path,expe{exp_idx},'/gamma_n/','*_reg' num2str(region) '.nc']);
+
 
 %% Read global nc vars
 filename = filelist(1).name;
@@ -60,180 +62,185 @@ for aa = 1:length(year)
     end
 end
 
-
-
-
 %% Load settings specific to this region.
 [regional_settings] = regional_settings_timeseries_plot(region,bathy);
+num_timeseries = length(regional_settings.Yn_thresholds(:,1));
 
-
-
-
+CT_annual_all = nan*ones(eN,num_timeseries,length(year));
+SA_annual_all = CT_annual_all;
 
 
 %% Main loop below. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-num_timeseries = length(regional_settings.Yn_thresholds(:,1));
+for exp_idx=1:eN
+    disp(expe{exp_idx})
+    addpath([path expe{exp_idx}])
+    filelist= dir([path expe{exp_idx} '/' '*_reg' num2str(region) '.nc']);
+    files_gn=dir([path,expe{exp_idx},'/gamma_n/','*_reg' num2str(region) '.nc']);
 
-% Create the empty variables to take the full timeseries
-CT_timeseries = nan*ones(num_timeseries,(length(time)*length(year)));
-SA_timeseries = CT_timeseries;
+    % Create the empty variables to take the full timeseries
+    CT_timeseries = nan*ones(num_timeseries,(length(time)*length(year)));
+    SA_timeseries = CT_timeseries;
 
 
-global_time_start = 0;
-for yy = 1:length(filelist) % for each year netcdf
-    filename = filelist(yy).name;
-    % Read local nc vars
-    T = ncread(filename,'votemper');
-    S = ncread(filename,'vosaline');
-    time = ncread(filename,'time');
-    time = time + basetime;
-    
-    % Set values inside bathy from 0 to nan.
-    T(tmask==0) = nan;
-    S(tmask==0) = nan;
-    
-    Yn_filename = [path,expe,'/gamma_n/',files_gn(yy).name];
-    gamma_n = ncread(Yn_filename,'gamma_n');
-    
-        %% Subset by polygon?  
-        if ~isempty(regional_settings.boundary_polygon)
-            sz = length(lon2d(:,1)) * length(lon2d(1,:));
-            lon1d = reshape(lon2d,1,sz);
-            lat1d = reshape(lat2d,1,sz);
-            % IN = inpolygon(X,Y,XV,YV)
-            IN = inpolygon(lon1d,lat1d,regional_settings.boundary_polygon(1,:),regional_settings.boundary_polygon(2,:));
-            mask = reshape(IN,length(lon2d(:,1)),length(lon2d(1,:)))';
-            mask = mask';
-            % Now delete everything outside mask.  Currently in loop; tidy and redo
-            % with matrices...
-            for dd = 1:length(depth)
-                for tt = 1:length(time)
-                    tmp = S(:,:,dd,tt); tmp(mask==0) = nan; S(:,:,dd,tt) = tmp;
-                    tmp = T(:,:,dd,tt); tmp(mask==0) = nan; T(:,:,dd,tt) = tmp;
-                end
-            end % end depth loop
-        end
-    
-    
-    
-    
-    %% Mask using bathymetry if necessary.
-    % Set data outside bathy mask to NaN.  Can probably do this without a
-    % loop but the indexing currently escapes me...
-    
-    for dd = 1:length(depth) % for each depth
-        for tt = 1:length(time) % for each time step
-            T_temp = T(:,:,dd,tt);
-            T_temp(regional_settings.bathy_mask==0) = nan;
-            T(:,:,dd,tt) = T_temp;
+    global_time_start = 0;
+    for yy = 1:length(filelist) % for each year netcdf
+        filename = filelist(yy).name;
+        % Read local nc vars
+        T = ncread(filename,'votemper');
+        S = ncread(filename,'vosaline');
+        time = ncread(filename,'time');
+        time = time + basetime;
+
+        % Set values inside bathy from 0 to nan.
+        T(tmask==0) = nan;
+        S(tmask==0) = nan;
+
+        Yn_filename = [path,expe{exp_idx},'/gamma_n/',files_gn(yy).name];
+        gamma_n = ncread(Yn_filename,'gamma_n');
+
+            %% Subset by polygon?  
             
-            S_temp = S(:,:,dd,tt);
-            S_temp(regional_settings.bathy_mask==0) = nan;
-            S(:,:,dd,tt) = S_temp;
+            if ~isempty(regional_settings.boundary_polygon)
+                sz = length(lon2d(:,1)) * length(lon2d(1,:));
+                lon1d = reshape(lon2d,1,sz);
+                lat1d = reshape(lat2d,1,sz);
+                % IN = inpolygon(X,Y,XV,YV)
+                IN = inpolygon(lon1d,lat1d,regional_settings.boundary_polygon(1,:),regional_settings.boundary_polygon(2,:));
+                mask = reshape(IN,length(lon2d(:,1)),length(lon2d(1,:)))';
+                mask = mask';
+                % Now delete everything outside mask.  Currently in loop; tidy and redo
+                % with matrices...
+                for dd = 1:length(depth)
+                    for tt = 1:length(time)
+                        tmp = S(:,:,dd,tt); tmp(mask==0) = nan; S(:,:,dd,tt) = tmp;
+                        tmp = T(:,:,dd,tt); tmp(mask==0) = nan; T(:,:,dd,tt) = tmp;
+                    end
+                end % end depth loop
+            end
+
+
+
+        %% Mask using bathymetry if necessary.
+        % Set data outside bathy mask to NaN.  Can probably do this without a
+        % loop but the indexing currently escapes me...
+
+        for dd = 1:length(depth) % for each depth
+            for tt = 1:length(time) % for each time step
+                T_temp = T(:,:,dd,tt);
+                T_temp(regional_settings.bathy_mask==0) = nan;
+                T(:,:,dd,tt) = T_temp;
+
+                S_temp = S(:,:,dd,tt);
+                S_temp(regional_settings.bathy_mask==0) = nan;
+                S(:,:,dd,tt) = S_temp;
+            end
+        end % End of 'for each depth'
+
+
+
+
+
+
+        % Convert GSW - Note this is just for one timestep
+        % NOTE THE GSW TASKS ARE BY FAR THE SLOWEST PART OF THIS SCRIPT.
+        % MAYBE THERE'S A WAY TO BYPASS UNTIL THE AVERAGE IS COMPLETED...
+        % [SA, in_ocean] = gsw_SA_from_SP(SP,p,long,lat)
+        % SA = gsw_SA_from_SP(S,depth4d,nanmean(nanmean(lon2d)),nanmean(nanmean(lat2d)));
+        SA = gsw_SA_from_SP(S,depth4d,lon4d,lat4d);
+        % CT = gsw_CT_from_t(SA,t,p)
+        CT = gsw_CT_from_t(SA,T,depth4d);
+
+        for ww = 1:num_timeseries % for each water mass timeseries
+
+            for tt = 1:12 % for each timestep
+                CT_temp = CT(:,:,:,tt);
+                SA_temp = SA(:,:,:,tt);
+                Yn_temp = gamma_n(:,:,:,tt);
+
+                ind = find(Yn_temp >= regional_settings.Yn_thresholds(ww,1) & Yn_temp < regional_settings.Yn_thresholds(ww,2));
+
+                CT_timeseries(ww,tt+global_time_start) = nanmean(CT_temp(ind));
+                SA_timeseries(ww,tt+global_time_start) = nanmean(SA_temp(ind));
+                % tt % print loop number
+            end % end time loop
         end
-    end % End of 'for each depth'
-    
-    
-    
-    
-    
-    
-    % Convert GSW - Note this is just for one timestep
-    % NOTE THE GSW TASKS ARE BY FAR THE SLOWEST PART OF THIS SCRIPT.
-    % MAYBE THERE'S A WAY TO BYPASS UNTIL THE AVERAGE IS COMPLETED...
-    % [SA, in_ocean] = gsw_SA_from_SP(SP,p,long,lat)
-    % SA = gsw_SA_from_SP(S,depth4d,nanmean(nanmean(lon2d)),nanmean(nanmean(lat2d)));
-    SA = gsw_SA_from_SP(S,depth4d,lon4d,lat4d);
-    % CT = gsw_CT_from_t(SA,t,p)
-    CT = gsw_CT_from_t(SA,T,depth4d);
-  
+
+        global_time_start = global_time_start + 12;
+        disp(['Finished year ' num2str(year(yy))]);
+    end % End of 'for each year (V20 file)' loop
+
+
+    %% Compute monthly anomalies
+    CT_seasonal = nan*ones(num_timeseries,12);
+    SA_seasonal = CT_seasonal;
+    CT_seasonal_anom = CT_seasonal;
+    SA_seasonal_anom = SA_seasonal;
+
+
+    for mm = 1:12
+       ind = find(reg.month == mm);
+
+       for ww = 1:num_timeseries % for each water mass timeseries
+        CT_seasonal(ww,mm) = nanmean(CT_timeseries(ww,ind));
+        SA_seasonal(ww,mm) = nanmean(SA_timeseries(ww,ind));
+
+
+       end
+
+    end
+
+    for ww = 1:num_timeseries
+        CT_seasonal_anom(ww,:) = CT_seasonal(ww,:) - mean(CT_seasonal(ww,:));
+        SA_seasonal_anom(ww,:) = SA_seasonal(ww,:) - mean(SA_seasonal(ww,:));   
+    end
+
+    % Subtract monthly anomalies from timeseries
+    CT_timeseries_deseasoned = CT_timeseries*nan;
+    SA_timeseries_deseasoned = CT_timeseries_deseasoned;
+
+    for ww = 1:num_timeseries
+        for mm = 1:12    
+            ind = find(reg.month == mm);   
+            CT_timeseries_deseasoned(ww,ind) = CT_timeseries(ww,ind) - CT_seasonal_anom(ww,mm);
+            SA_timeseries_deseasoned(ww,ind) = SA_timeseries(ww,ind) - SA_seasonal_anom(ww,mm);
+        end
+    end
+
+
+    % %% 12 month running mean
+    % smoothspan = 12;
+    % for ww = 1:num_timeseries % for each water mass timeseries
+    %     CT_timeseries(ww,:) = smooth(CT_timeseries(ww,:),smoothspan);
+    %     SA_timeseries(ww,:) = smooth(SA_timeseries(ww,:),smoothspan);
+    %     CT_timeseries(ww,1:smoothspan) = nan;CT_timeseries(ww,end-smoothspan:end) = nan;
+    %     SA_timeseries(ww,1:smoothspan) = nan;SA_timeseries(ww,end-smoothspan:end) = nan;
+    % end 
+
+    %% Annual means
+    CT_annual = nan*ones(num_timeseries,length(year));
+    SA_annual = CT_annual;
+
     for ww = 1:num_timeseries % for each water mass timeseries
-        
-        for tt = 1:12 % for each timestep
-            CT_temp = CT(:,:,:,tt);
-            SA_temp = SA(:,:,:,tt);
-            Yn_temp = gamma_n(:,:,:,tt);
-            
-            ind = find(Yn_temp >= regional_settings.Yn_thresholds(ww,1) & Yn_temp < regional_settings.Yn_thresholds(ww,2));
-            
-            CT_timeseries(ww,tt+global_time_start) = nanmean(CT_temp(ind));
-            SA_timeseries(ww,tt+global_time_start) = nanmean(SA_temp(ind));
-            % tt % print loop number
-        end % end time loop
+        for aa = 1:length(year)
+
+            ind = find(reg.year == year(aa));
+            CT_annual(ww,aa) = nanmean(CT_timeseries_deseasoned(ww,ind));
+            SA_annual(ww,aa) = nanmean(SA_timeseries_deseasoned(ww,ind));
+
+        end
     end
-    
-    global_time_start = global_time_start + 12;
-    disp(['Finished year ' num2str(year(yy))]);
-end % End of 'for each year (V20 file)' loop
+    CT_annual_all(exp_idx,:,:) = CT_annual;
+    SA_annual_all(exp_idx,:,:) = SA_annual;
 
-
-
-%% Compute monthly anomalies
-CT_seasonal = nan*ones(num_timeseries,12);
-SA_seasonal = CT_seasonal;
-CT_seasonal_anom = CT_seasonal;
-SA_seasonal_anom = SA_seasonal;
-
-
-for mm = 1:12
-   ind = find(reg.month == mm);
-   
-   for ww = 1:num_timeseries % for each water mass timeseries
-    CT_seasonal(ww,mm) = nanmean(CT_timeseries(ww,ind));
-    SA_seasonal(ww,mm) = nanmean(SA_timeseries(ww,ind));
-    
-
-   end
-   
 end
-
-for ww = 1:num_timeseries
-    CT_seasonal_anom(ww,:) = CT_seasonal(ww,:) - mean(CT_seasonal(ww,:));
-    SA_seasonal_anom(ww,:) = SA_seasonal(ww,:) - mean(SA_seasonal(ww,:));   
-end
-
-% Subtract monthly anomalies from timeseries
-CT_timeseries_deseasoned = CT_timeseries*nan;
-SA_timeseries_deseasoned = CT_timeseries_deseasoned;
-
-for ww = 1:num_timeseries
-    for mm = 1:12    
-        ind = find(reg.month == mm);   
-        CT_timeseries_deseasoned(ww,ind) = CT_timeseries(ww,ind) - CT_seasonal_anom(ww,mm);
-        SA_timeseries_deseasoned(ww,ind) = SA_timeseries(ww,ind) - SA_seasonal_anom(ww,mm);
-    end
-end
-
-
-% %% 12 month running mean
-% smoothspan = 12;
-% for ww = 1:num_timeseries % for each water mass timeseries
-%     CT_timeseries(ww,:) = smooth(CT_timeseries(ww,:),smoothspan);
-%     SA_timeseries(ww,:) = smooth(SA_timeseries(ww,:),smoothspan);
-%     CT_timeseries(ww,1:smoothspan) = nan;CT_timeseries(ww,end-smoothspan:end) = nan;
-%     SA_timeseries(ww,1:smoothspan) = nan;SA_timeseries(ww,end-smoothspan:end) = nan;
-% end 
-
-%% Annual means
-CT_annual = nan*ones(num_timeseries,length(year));
-SA_annual = CT_annual;
-
-for ww = 1:num_timeseries % for each water mass timeseries
-    for aa = 1:length(year)
-        
-        ind = find(reg.year == year(aa));
-        CT_annual(ww,aa) = nanmean(CT_timeseries_deseasoned(ww,ind));
-        SA_annual(ww,aa) = nanmean(SA_timeseries_deseasoned(ww,ind));
-        
-    end
-end
-
 
 %% Calculate trend and confidence intervals
+CT_annual = squeeze(nanmean(CT_annual_all,1));
+SA_annual = squeeze(nanmean(SA_annual_all,1));
 
 for ww = 1:num_timeseries % for each water mass timeseries
-    
+    if sum(~isnan(CT_annual(ww,:)))>0
     %% %%%%%%%%%%%%%% Linear regression: CT  %%%%%%%%%%%%%%%%%%%
     X = year'; tempones = ones(length(X),1); X = [X tempones]; % stats output requires a column of ones to be appended to X
     y = CT_annual(ww,:)';
@@ -261,23 +268,24 @@ for ww = 1:num_timeseries % for each water mass timeseries
     alphaup =  1-0.05/2; %1-0.05/2;
     t_crit_y = tinv(alphaup,deof_y); %find t_crit through matlab function
     
-    yresid1 = y - yfit1;
-    S2_e = (1/(deof_y-2)) * sum(yresid1.^2); % (eq. 1.33 on page 48 of internet doc)
-    S_a = sqrt(S2_e / (sum((y-nanmean(y)).^2))); % (eq. 1.34 on page 48)
-    % SJ NOTE: THE ABOVE COUPLE OF LINES SEEMS TO RESULT IN VALUES TOO
-    % LARGE TO RESULT IN TEST PASSES. INVESTIGATE! (see https://o2.eas.gatech.edu/courses/EAS2655/week5.pdf)
+    yresid = y - yfit1;
+    yresid1 = sum(yresid.^2); % sum of the squared residuals
+    ytotal1 = (length(y)-1) * var(y); % n * variance
+    
+    % adjusted coefficient of determination
+    rsq_y = 1 - yresid1/ytotal1*(length(y)-1)/(length(y)-2);
+    %rsq_y = rsquared;
     
     % significance test, t-test, 95% interval, H_0: R=0.0
-    t1 = beta(2)/S_a; % (eq. 135 on page 48)
-    
-    % if 1: test is significant; 0: test is not significant
+    t1 = sqrt((rsq_y*(deof_y-2))/(1-rsq_y));
     if t_crit_y<abs(t1)
         CT_significant = 1;
     else
-        CT_significant=0;
+        CT_significant = 0;
     end
     
-    
+    clear y_xc deof_y alphaup t_crit_y yresid yresid1 ytotal1 rsq_y t1
+
     
     
     
@@ -298,7 +306,7 @@ for ww = 1:num_timeseries % for each water mass timeseries
     [SA_upp_bound(ww,:),SA_low_bound(ww,:),xvals] = regression_line_ci(0.05,beta,X(:,1),y,(length(year)-1)); % for 95% confindence interval
     clear b bint r rint stats X y
     
-%     %% Regression analysis assuming 1D variable (dim = 1xN, Kristin code 161221)
+    %% Regression analysis assuming 1D variable (dim = 1xN, Kristin code 161221)
     yfit1 = SA_lin_fit(ww,:); %this is the trend time series
     y = SA_annual(ww,:); %this is the data time series
     %t-value � find doef
@@ -308,29 +316,28 @@ for ww = 1:num_timeseries % for each water mass timeseries
     alphaup =  1-0.05/2; %1-0.05/2;
     t_crit_y = tinv(alphaup,deof_y); %find t_crit through matlab function
     
-    yresid1 = y - yfit1;
-    S2_e = (1/(deof_y-2)) * sum(yresid1.^2); % (eq. 1.33 on page 48 of internet doc)
-    S_a = sqrt(S2_e / (sum((y-nanmean(y)).^2))); % (eq. 1.34 on page 48)
-    % SJ NOTE: THE ABOVE COUPLE OF LINES SEEMS TO RESULT IN VALUES TOO
-    % LARGE TO RESULT IN TEST PASSES. INVESTIGATE! (see https://o2.eas.gatech.edu/courses/EAS2655/week5.pdf)
+    yresid = y - yfit1;
+    yresid1 = sum(yresid.^2); % sum of the squared residuals
+    ytotal1 = (length(y)-1) * var(y); % n * variance
+    
+    % adjusted coefficient of determination
+    rsq_y = 1 - yresid1/ytotal1*(length(y)-1)/(length(y)-2);
+    %rsq_y = rsquared;    
     
     % significance test, t-test, 95% interval, H_0: R=0.0
-    t1 = beta(2)/S_a; % (eq. 135 on page 48)
-    
-    % if 1: test is significant; 0: test is not significant
+    t1 = sqrt((rsq_y*(deof_y-2))/(1-rsq_y));
     if t_crit_y<abs(t1)
         SA_significant = 1;
     else
-        SA_significant=0;
+        SA_significant = 0;
     end
     
-    
+    clear y_xc deof_y alphaup t_crit_y yresid yresid1 ytotal1 rsq_y t1
     
     %% Report stats to csv
     % [water mass number CT_gradient(deg/yr) CT_intercept CT_significant SA_gradient(gkg-1/yr) SA_intercept SA_significant]
-    M(ww,:) = [ww CT_grad CT_intercept CT_significant SA_grad SA_intercept SA_significant];
-%     M(ww,:) = [ww CT_grad CT_intercept SA_grad SA_intercept];
-    
+    M(ww,:) = [ww CT_grad.*10 CT_intercept CT_significant SA_grad.*10 SA_intercept SA_significant];
+    end
 end
 
 
@@ -356,7 +363,7 @@ figure(1)
 clf;
 plot_no = 1;
 % xyears = [datenum('01-01-1980') datenum('01-01-1990') datenum('01-01-2000') datenum('01-01-2010') datenum('01-01-2020')];
-xyears = [1980 1990 2000 2010 2020];
+xyears = [2020 2030 2040 2050 2060 2070];
 for nn = 1:num_timeseries
 
     
@@ -364,17 +371,18 @@ for nn = 1:num_timeseries
     subplot(num_timeseries,2,plot_no); 
     hold on
     
+    %plot(reg.time,CT_timeseries(nn,:),'k');
+    plot(year,squeeze(CT_annual_all(:,nn,:)),'color',[.5 .5 .5],'linewidth',1)
+    plot(year,CT_annual(nn,:),'k','linewidth',2);
+    
     % plot linear fit and CIs
     patchX = [year year(end:-1:1)];
     patchY = [CT_upp_bound(nn,:) CT_low_bound(nn,end:-1:1)];
-    patch(patchX,patchY,[0.5 0.5 0.5],'LineStyle','none'); alpha(0.3);
-    plot(year,CT_lin_fit(nn,:),'color',[0.5 0.5 0.5],'linewidth',2);
-    
-    %plot(reg.time,CT_timeseries(nn,:),'k');
-    plot(year,CT_annual(nn,:),'k','linewidth',2);
-    
+    patch(patchX,patchY,[0.6350 0.0780 0.1840],'LineStyle','none'); alpha(0.7);
+    plot(year,CT_lin_fit(nn,:),'color',[0.6350 0.0780 0.1840],'linewidth',2);alpha(0.5);
     grid on;
     xticks(xyears);
+    
     % xlim([datenum('01-01-1980') datenum('01-01-2020')]);
     xlim([year(1) year(end)]);
     % datetick('keepticks','keeplimits');
@@ -388,14 +396,16 @@ for nn = 1:num_timeseries
     subplot(num_timeseries,2,plot_no); 
     hold on
     
+    % plot(reg.time,SA_timeseries(nn,:),'k');
+    plot(year,squeeze(SA_annual_all(:,nn,:)),'color',[.5 .5 .5],'linewidth',1)
+    plot(year,SA_annual(nn,:),'k','linewidth',2);
+    
     % plot linear fit and CIs
     patchX = [year year(end:-1:1)];
     patchY = [SA_upp_bound(nn,:) SA_low_bound(nn,end:-1:1)];
-    patch(patchX,patchY,[0.5 0.5 0.5],'LineStyle','none'); alpha(0.3);
-    plot(year,SA_lin_fit(nn,:),'color',[0.5 0.5 0.5],'linewidth',2);
+    patch(patchX,patchY,[0.6350 0.0780 0.1840],'LineStyle','none'); alpha(0.7);
+    plot(year,SA_lin_fit(nn,:),'color',[0.6350 0.0780 0.1840],'linewidth',2);alpha(0.5);
     
-    % plot(reg.time,SA_timeseries(nn,:),'k');
-    plot(year,SA_annual(nn,:),'k','linewidth',2);
     grid on;
     xticks(xyears);
     % xlim([datenum('01-01-1980') datenum('01-01-2020')]);
