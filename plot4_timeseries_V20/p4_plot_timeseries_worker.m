@@ -1,7 +1,9 @@
-function p4_plot_timeseries_worker(region)
+function p4_plot_timeseries_worker(path,region)
 disp(['Working on region ' num2str(region)]);
 tic
 
+filelist= dir([path '/monthly/' '*_reg' num2str(region) '.nc']);
+files_gn=dir([path,'/gamma_n/','*_reg' num2str(region) '.nc']);
 year = 1980:2019;
 %season = [1 2 3; 4 5 6; 7 8 9; 10 11 12];
 %season_names = ['JFM';'AMJ';'JAS';'OND'];
@@ -10,7 +12,7 @@ basetime = datenum('01-01-1900');
 % colours = (pmkmp(41,'CubicL'));
 
 %% Read global nc vars
-filename = ['1_VIKING20X.L46-KFS003_1m_19800101_19801231_grid_T_reg' num2str(region) '.nc'];
+filename = [path,'/monthly/',filelist(1).name];
 z = ncread(filename,'depth');
 z2d = ncread(filename,'gdept_0'); % partial grid cells at bottom due to bathymetry
 x = ncread(filename,'x');
@@ -77,8 +79,8 @@ SA_timeseries = CT_timeseries;
 
 
 global_time_start = 0;
-for yy = 1:length(year) % for each year netcdf
-    filename = ['1_VIKING20X.L46-KFS003_1m_' num2str(year(yy)) '0101_' num2str(year(yy)) '1231_grid_T_reg' num2str(region) '.nc'];
+for yy = 1:length(filelist) % for each year netcdf
+    filename = [path,'/monthly/',filelist(yy).name];
     % Read local nc vars
     T = ncread(filename,'votemper');
     S = ncread(filename,'vosaline');
@@ -89,7 +91,7 @@ for yy = 1:length(year) % for each year netcdf
     T(T==0) = nan;
     S(S==0) = nan;
     
-    Yn_filename = ['I:\iAtlantic_overflow\VIKING20\D1p2\gamma_n\' filename]; % <- UPDATE TO VIKING20 LOCATION
+    Yn_filename = [path,'/gamma_n/',files_gn(yy).name];
     gamma_n = ncread(Yn_filename,'gamma_n');
     
         %% Subset by polygon?  
@@ -250,7 +252,7 @@ for ww = 1:num_timeseries % for each water mass timeseries
     %% Regression analysis assuming 1D variable (dim = 1xN, Kristin code 161221)
     yfit1 = CT_lin_fit(ww,:); %this is the trend time series
     y = CT_annual(ww,:); %this is the data time series
-    %t-value – find doef
+    %t-value ï¿½ find doef
     y_xc = xcorr(y-nanmean(y(:)),'coeff'); %autocorrelation
     y_xc = y_xc(ceil(length(y_xc)/2)+1:end); %only positive values
     deof_y = round(length(y)/find(y_xc<=1/exp(1),1,'first')); %deof are (number of obs)/(decorrelation or e-folding timescale)
@@ -275,8 +277,7 @@ for ww = 1:num_timeseries % for each water mass timeseries
     
     clear y_xc deof_y alphaup t_crit_y yresid yresid1 ytotal1 rsq_y t1
     
-
-    
+ 
     
     
     
@@ -301,7 +302,7 @@ for ww = 1:num_timeseries % for each water mass timeseries
     %% Regression analysis assuming 1D variable (dim = 1xN, Kristin code 161221)
     yfit1 = SA_lin_fit(ww,:); %this is the trend time series
     y = SA_annual(ww,:); %this is the data time series
-    %t-value – find doef
+    %t-value ï¿½ find doef
     y_xc = xcorr(y-nanmean(y(:)),'coeff'); %autocorrelation
     y_xc = y_xc(ceil(length(y_xc)/2)+1:end); %only positive values
     deof_y = round(length(y)/find(y_xc<=1/exp(1),1,'first')); %deof are (number of obs)/(decorrelation or e-folding timescale)

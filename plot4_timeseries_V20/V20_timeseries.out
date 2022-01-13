@@ -1,0 +1,208 @@
+Mon Jan 10 22:57:23 CET 2022
+
+                                                                              < M A T L A B (R) >
+                                                                    Copyright 1984-2020 The MathWorks, Inc.
+                                                                    R2020b (9.9.0.1467703) 64-bit (glnxa64)
+                                                                                August 26, 2020
+
+ 
+To get started, type doc.
+For product information, visit www.mathworks.com.
+ 
+
+regions =
+
+     1     2     4     5
+
+Working on region 1
+Finished year 1
+Finished year 2
+Finished year 3
+Finished year 4
+Finished year 5
+Finished year 6
+Finished year 7
+Finished year 8
+Finished year 9
+Finished year 10
+Finished year 11
+Finished year 12
+Finished year 13
+Finished year 14
+Finished year 15
+Finished year 16
+Finished year 17
+Finished year 18
+Finished year 19
+Finished year 20
+Finished year 21
+Finished year 22
+Finished year 23
+Finished year 24
+Finished year 25
+Finished year 26
+Finished year 27
+Finished year 28
+Finished year 29
+Finished year 30
+Finished year 31
+Finished year 32
+Finished year 33
+Finished year 34
+Finished year 35
+Finished year 36
+Finished year 37
+Finished year 38
+Finished year 39
+Finished year 40
+[Warning: MATLAB cannot use OpenGL for printing when started with the '-nodisplay' option.] 
+[> In inputcheck
+In print (line 41)
+In p4_plot_timeseries_worker (line 432)
+In Timeseries_plot_wrapper_script_RUNME (line 11)
+In run (line 91)] 
+Elapsed time is 3698.230656 seconds.
+Working on region 2
+Finished year 1
+Finished year 2
+Finished year 3
+Finished year 4
+Finished year 5
+Finished year 6
+Finished year 7
+Finished year 8
+Finished year 9
+Finished year 10
+Finished year 11
+Finished year 12
+Finished year 13
+Finished year 14
+Finished year 15
+Finished year 16
+Finished year 17
+Finished year 18
+Finished year 19
+Finished year 20
+Finished year 21
+Finished year 22
+Finished year 23
+Finished year 24
+Finished year 25
+Finished year 26
+Finished year 27
+Finished year 28
+Finished year 29
+Finished year 30
+Finished year 31
+Finished year 32
+Finished year 33
+Finished year 34
+Finished year 35
+Finished year 36
+Finished year 37
+Finished year 38
+Finished year 39
+Finished year 40
+[Warning: MATLAB cannot use OpenGL for printing when started with the '-nodisplay' option.] 
+[> In inputcheck
+In print (line 41)
+In p4_plot_timeseries_worker (line 432)
+In Timeseries_plot_wrapper_script_RUNME (line 11)
+In run (line 91)] 
+Elapsed time is 2202.274204 seconds.
+Working on region 4
+Finished year 1
+Finished year 2
+Finished year 3
+Finished year 4
+Finished year 5
+Finished year 6
+Finished year 7
+Finished year 8
+Finished year 9
+Finished year 10
+Finished year 11
+Finished year 12
+Finished year 13
+Finished year 14
+Finished year 15
+Finished year 16
+Finished year 17
+Finished year 18
+Finished year 19
+Finished year 20
+Finished year 21
+Finished year 22
+Finished year 23
+Finished year 24
+Finished year 25
+Finished year 26
+Finished year 27
+Finished year 28
+Finished year 29
+Finished year 30
+Finished year 31
+Finished year 32
+Finished year 33
+Finished year 34
+Finished year 35
+Finished year 36
+Finished year 37
+Finished year 38
+Finished year 39
+Finished year 40
+[Warning: MATLAB cannot use OpenGL for printing when started with the '-nodisplay' option.] 
+[> In inputcheck
+In print (line 41)
+In p4_plot_timeseries_worker (line 432)
+In Timeseries_plot_wrapper_script_RUNME (line 11)
+In run (line 91)] 
+Elapsed time is 463.535399 seconds.
+Working on region 5
+Finished year 1
+Finished year 2
+Finished year 3
+Finished year 4
+Finished year 5
+Finished year 6
+Finished year 7
+Finished year 8
+Finished year 9
+Finished year 10
+Finished year 11
+Finished year 12
+Finished year 13
+Finished year 14
+Finished year 15
+Finished year 16
+Finished year 17
+Finished year 18
+Finished year 19
+Finished year 20
+Finished year 21
+Finished year 22
+Finished year 23
+Finished year 24
+Finished year 25
+Finished year 26
+Finished year 27
+Finished year 28
+Finished year 29
+Finished year 30
+Finished year 31
+Finished year 32
+Finished year 33
+Finished year 34
+Finished year 35
+Finished year 36
+Finished year 37
+Finished year 38
+Finished year 39
+Finished year 40
+[Warning: MATLAB cannot use OpenGL for printing when started with the '-nodisplay' option.] 
+[> In inputcheck
+In print (line 41)
+In p4_plot_timeseries_worker (line 432)
+In Timeseries_plot_wrapper_script_RUNME (line 11)
+In run (line 91)] 
+Elapsed time is 9684.363826 seconds.
