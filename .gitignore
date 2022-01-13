@@ -2,3 +2,4 @@
 # *.mat
 # exclude folders
 # /data
+**/.ipynb_checkpoints
