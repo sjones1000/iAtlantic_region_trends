@@ -1,0 +1,12 @@
+{Error using /
+Matrix dimensions must agree.
+
+Error in p4_plot_timeseries_worker (line 268)
+    deof_y = round(length(y)/find(y_xc<=1/exp(1),1,'first')); %deof are (number of obs)/(decorrelation or e-folding timescale)
+
+Error in Timeseries_plot_wrapper_script_RUNME (line 12)
+    p4_plot_timeseries_worker(in_dir,region)
+
+Error in run (line 91)
+evalin('caller', strcat(script, ';'));
+} 

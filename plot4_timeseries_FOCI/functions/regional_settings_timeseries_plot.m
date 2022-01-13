@@ -61,6 +61,8 @@ elseif region == 5
     regional_settings.sig0_thresholds = [];
     regional_settings.Yn_thresholds = [25.8 26.6; 26.8 27.1; 27.1 27.4; NaN NaN; 27.7 27.8; 27.8 27.9; 27.9 35];
     regional_settings.WM_names = {'STUW','WNACW','ENACW','AAIW','uNADW','lNADW','NEABW'};
+    regional_settings.boundary_polygon = [];
+
     
 elseif region == 6
     regional_settings.region_name = 'Eastern Tropical NA';
